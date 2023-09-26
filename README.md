@@ -1,13 +1,23 @@
 # EvernoteToAnytype
 Enex to JSON converter, for export Evernote to Anytype
 
+### Environnement 
+```
+pip install beautifulsoup4
+pip install lxml
+```
+
 ### Définition générale
 - [x] Création du modèle json de base
 - [x] Génération d'ID par div
 - [x] Insertion des éléments des div
 - [ ] Pleine page _(validé, à intégrer au modèle)_
 
-**Evernote exporte la même note de différentes façon si le texte (font) a été modifié, si la version est différente (legacy vs modern)...**
+
+**Points d'attention :**
+Evernote exporte la même note de différentes façon si le texte (font) a été modifié, si la version est différente (legacy vs modern)...
+- Imbrication de div (sans réalité dans la note)
+- utilisation de style sur span ou de balise i,u,s,...
 
 ### Blocs (EN) spécifiques et mise en forme du bloc
 
