@@ -47,16 +47,16 @@ Evernote exporte la même note de différentes façon si le texte (font) a été
 
 ### Mise en forme du texte inline
 **Texte en italique**
-- [ ] via i
-- [ ] via <span> style
+- [x] via i
+- [x] via <span> style
 
 **Texte en gras**
-- [ ] via b
-- [ ] via <span> style
+- [x] via b
+- [x] via <span> style
 
 **Texte souligné**
-- [ ] via i
-- [ ] via <span> style
+- [x] via i
+- [x] via <span> style
 
 **Texte décalé**
 **_(création de blocs enfant)_**
@@ -69,7 +69,7 @@ Evernote exporte la même note de différentes façon si le texte (font) a été
 
 **Texte surligné**
 - [ ] mappage des couleurs EN > AT
-- [ ] style background-color
+- [x] style background-color
 - [ ] style --en-highlight
 
 ### Détails de la note
