@@ -29,15 +29,15 @@ Evernote exporte la même note de différentes façon si le texte (font) a été
 - [ ] décochée
 
 **Alignement**
-- [ ] centré
-- [ ] à droite
+- [x] centré
+- [x] à droite
 
 **Titres**
-- [ ] H1
-- [ ] H2
-- [ ] H3
+- [x] H1
+- [x] H2
+- [x] H3
 
-- [ ] Séparateur hr
+- [x] Séparateur hr
 
 **Bloc de code**
 - [ ] Test format AT
@@ -46,6 +46,8 @@ Evernote exporte la même note de différentes façon si le texte (font) a été
 - [ ] Gestion espaces
 
 ### Mise en forme du texte inline
+- [x] Gestion doublons
+
 **Texte en italique**
 - [x] via i
 - [x] via <span> style
@@ -65,7 +67,7 @@ Evernote exporte la même note de différentes façon si le texte (font) a été
 
 **Texte en couleur**
 - [ ] mappage des couleurs EN > AT
-- [ ] style color
+- [x] style color
 
 **Texte surligné**
 - [ ] mappage des couleurs EN > AT
