@@ -1,4 +1,4 @@
-# EvernoteToAnytype
+# EvernoteToAnytype - IN DEVELOPMENT!
 Enex to JSON converter, for export Evernote to Anytype
 
 ### Environnement 
