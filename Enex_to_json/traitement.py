@@ -2,12 +2,13 @@ from bs4 import BeautifulSoup
 import json
 import random
 import string
-
+from scipy.spatial import cKDTree
+import models.mime as mime
 
 
 def generate_random_id():
     """
-    Génère un identifiant aléatoire en hexadécimal de la longueur spécifiée (par défaut 20 caractères)
+    Génère un identifiant aléatoire en hexadécimal de la longueur spécifiée
     """ 
     hex_chars = '0123456789abcdef'
     return ''.join(random.choice(hex_chars) for _ in range(24))
@@ -28,51 +29,123 @@ def extract_shifting_left(div):
 
 # couleur AT suivant le RGB Evernote
 def extract_color_from_style(style):
-    # TODO : il faut aussi intégrer les cas de type #ffef9e
-        ## Puis définir des plages (couleurs rgb vers 10 couleurs sur AT)
+    """Transform RGB or Hexa color from Evernote to a AT color (limited)
 
+    Args:
+        style (string): "rgb()" or "#xxxxxx"
 
-    #rgb_value = style.split("(")[1].split(")")[0]
-    #rgb_components = [int(component) for component in rgb_value.split(",")]
-
-    # Définition de certaines couleurs courantes
+    Returns:
+        string: color name
+    """
     colors = {
-        (255, 0, 0): "red",
-        (0, 255, 0): "vert",
-        (0, 0, 255): "bleu",
-        (255, 255, 0): "yellow",
-        (0, 255, 255): "purple",
-        (255, 0, 255): "pink",
-        (128, 0, 0): "maroon",
-        (240, 168, 65): "lime",
-        (0, 0, 128): "orange",
-        (128, 128, 0): "olive",
-        (128, 0, 128): "violet",
-        (0, 128, 128): "grey",
-        (192, 192, 192): "argent",
-        (128, 128, 128): "gris foncé",
-        (0, 0, 0): "noir",
-        (255, 255, 255): "blanc"
+        "grey": (182, 182, 182),
+        "yellow": (236, 217, 27),
+        "orange": (255, 181, 34),
+        "red": (245, 85, 34),
+        "pink": (229, 28, 160),
+        "purple": (171, 80, 204),
+        "blue": (62, 88, 235),
+        "ice": (42, 167, 238),
+        "teal": (15, 200, 186),
+        "lime": (93, 212, 0),
+    }
+    # For background-color, map 1 to 1
+    EN_bck_color ={
+        "yellow": (255, 239, 158),
+        "orange": (255, 209, 176),
+        "red": (254, 193, 208),
+        "purple": (203, 202, 255),
+        "blue": (176, 236, 244),
+        "lime": (183, 247, 209)
     }
 
-    # Cherche une correspondance de couleur basée sur la valeur RGB
-    # if tuple(rgb_components) in colors:
-    #     return colors[tuple(rgb_components)]
-    # else:
-    #     return "red"
-    return "red"
+    def rgb_to_tuple(rgb):
+        return tuple(int(x) for x in rgb.split(","))
+    
+    def closest_color(rgb):
+        # Vérifier s'il y a une correspondance exacte dans EN_bck_color
+        exact_match = [key for key, value in EN_bck_color.items() if value == rgb]
+        if exact_match:
+            return exact_match[0]
+        tree = cKDTree(list(colors.values()))
+        _, index = tree.query(rgb)
+        return list(colors.keys())[index]
+
+    # Vérifier si le style est au format rgb()
+    if style.startswith("rgb("):
+        rgb_value = style.split("(")[1].split(")")[0]
+        rgb_components = rgb_to_tuple(rgb_value)
+        return closest_color(rgb_components)
+    # Vérifier si le style est au format hexadécimal
+    elif style.startswith("#") and len(style) == 7:
+        hex_value = style.lstrip("#")
+        rgb_components = tuple(int(hex_value[i:i+2], 16) for i in (0, 2, 4))
+        return closest_color(rgb_components)
+    else:
+        return "red"  # Format non reconnu, rouge mis par défaut
 
 def extract_styles(style_string):
-    # Divisez la chaîne de style en une liste de styles et de valeurs
-    styles = [style.strip() for style in style_string.split(';') if style.strip()]
-
-    # Créez un dictionnaire pour stocker les styles et leurs valeurs
     style_dict = {}
-    for style in styles:
-        style_name, style_value = style.split(':')
-        style_dict[style_name.strip()] = style_value.strip()
+    if style_string:
+        # Divisez la chaîne de style en une liste de styles et de valeurs
+        styles = [style.strip() for style in style_string.split(';') if style.strip()]
 
+        # Créez un dictionnaire pour stocker les styles et leurs valeurs
+        for style in styles:
+            style_name, style_value = style.split(':')
+            style_dict[style_name.strip()] = style_value.strip()
     return style_dict
+
+def extract_tag_info(contenu_div, tags_list):
+    """Extract info about tag in this content
+
+    Args:
+        contenu_div (_type_): _description_
+        tags_list (list): list of tag to treat
+
+    Returns:
+        list: {
+            'tag_object': tag,
+            'text': text into this tag,
+            'start': starting position in contenu_div,
+            'end': end position in contenu_div
+        }
+    """    
+    # Analyser le contenu HTML
+    
+    ######### Tag avec tout
+    
+    # On recréé un objet soup à partir de l'objet tag transmis
+    contenu_str = str(contenu_div)
+    soup = BeautifulSoup(str(contenu_div), 'html.parser')
+    # TODO : voir si on peut transmettre un soup plutôt que tag?
+    
+    # Initialiser une liste pour stocker les informations des balises
+    tags_info = []
+
+    for tag in soup.find_all(tags_list):     
+        # print(tag)
+        
+        # Récupérer le texte à l'intérieur de la balise en utilisant extract_top_level_text
+        text = tag.get_text()
+
+        # On compte le nombre de caractères du texte de contenu_div jusqu'à la position de la balise
+        content_to_count = contenu_str[0:tag.sourcepos]
+        soup_to_count = BeautifulSoup(content_to_count, 'html.parser')
+        start = len(soup_to_count.get_text())
+
+        # position de fin de texte
+        end = start + len(text)
+
+        #print(f"'tag_name': {tag.name}, 'text': {text}, 'start': {start}, 'end': {end}, 'tag position' : {tag.sourcepos}")
+        # Ajouter les informations de la balise à la liste
+        tags_info.append({
+            'tag_object': tag,
+            'text': text,
+            'start': start,
+            'end': end
+        })
+    return tags_info
 
 
 # Fonction pour extraire le texte de niveau supérieur sans garder le texte des div
@@ -97,54 +170,55 @@ def extract_text_with_formatting(tag):
     Analyze the tags to transform the text formatting into AT JSON format. 
     """
     # Définition des balises inline à traiter
-    formatting_tags = ['span', 'b', 'u', 'i', 's', 'a']
+    formatting_tags = ['span', 'b', 'u', 'i', 's', 'a','font']
     text = extract_top_level_text(tag)
+
 
     if text:
         formatting_info = []
+        for element in extract_tag_info(tag, formatting_tags):
+            start = element['start']
+            end = element['end']
+            tag_object=element['tag_object']
+            tag_name = tag_object.name
+            
+            print(f"'tag_name': {tag_name}, 'text': {text}, 'start': {start}, 'end': {end}")
 
-        for tag_name in formatting_tags:
-            formatting_elements = tag.find_all(tag_name)
-            for element in formatting_elements:
-                element_text = element.get_text()
-                start = text.find(element_text)
-                end = start + len(element_text)
+            formatting_type = None
+            param = None
 
-                formatting_type = None
-                param = None
+            text_style = tag_object.get('style')
+            styles = extract_styles(text_style) if text_style else {}
 
-                text_style = element.get('style')
-                styles = extract_styles(text_style) if text_style else {}
+            if ("font-weight" in styles and styles["font-weight"] == "bold") or tag_name == 'b':
+                formatting_type = "Bold"
+            elif ("text-decoration" in styles and styles["text-decoration"] == "underline") or tag_name == 'u':
+                formatting_type = "Underscored"
+            elif ("font-style" in styles and styles["font-style"] == "italic") or tag_name == 'i':
+                formatting_type = "Italic"
+            elif ("text-decoration" in styles and styles["text-decoration"] == "line-through") or tag_name == 's':
+                formatting_type = "Strikethrough"
+            elif "color" in styles:
+                formatting_type = "TextColor"
+                param = extract_color_from_style(styles["color"])
+            elif 'background-color' in styles:
+                formatting_type = "BackgroundColor"
+                param = extract_color_from_style(styles["background-color"])
+            elif tag_name == 'a':
+                formatting_type = "Link"
+                param = element.get('href')
 
-                if ("font-weight" in styles and styles["font-weight"] == "bold") or tag_name == 'b':
-                    formatting_type = "Bold"
-                elif ("text-decoration" in styles and styles["text-decoration"] == "underline") or tag_name == 'u':
-                    formatting_type = "Underscored"
-                elif ("font-style" in styles and styles["font-style"] == "italic") or tag_name == 'i':
-                    formatting_type = "Italic"
-                elif ("text-decoration" in styles and styles["text-decoration"] == "line-through") or tag_name == 's':
-                    formatting_type = "Strikethrough"
-                elif "color" in styles:
-                    formatting_type = "TextColor"
-                    param = extract_color_from_style(styles["color"])
-                elif 'background-color' in styles:
-                    formatting_type = "BackgroundColor"
-                    param = extract_color_from_style(styles["background-color"])
-                elif tag_name == 'a':
-                    formatting_type = "Link"
-                    param = element.get('href')
+            if formatting_type:
+                formatting_info.append({
+                    "range": {
+                        "from": start,
+                        "to": end
+                    },
+                    "type": formatting_type
+                })
 
-                if formatting_type:
-                    formatting_info.append({
-                        "range": {
-                            "from": start,
-                            "to": end
-                        },
-                        "type": formatting_type
-                    })
-
-                if param:
-                    formatting_info[-1]["param"] = param
+            if param:
+                formatting_info[-1]["param"] = param
 
         return {
             "text": text,
@@ -166,8 +240,6 @@ def process_details_to_json(content):
     """
     pass
 
-
-
 def process_content_to_json(content, elements_json):
     """
     Processing <content> to create the parent element and calling a function for child elements
@@ -178,6 +250,9 @@ def process_content_to_json(content, elements_json):
     root_block = soup.find('en-note')
     first_element = {
         "id": generate_random_id(),  # Utilisation de la fonction pour générer un ID aléatoire
+        "fields": {
+            "width": 1
+            },
         "shifting": -1,
     }
     first_text = root_block.find_all(string=True, recursive=False)
@@ -185,6 +260,7 @@ def process_content_to_json(content, elements_json):
         first_element["text"] = first_text[0].strip()
 
     elements_json.append(first_element)
+    
     process_div_children(root_block, elements_json)
 
 
@@ -193,89 +269,68 @@ def process_div_children(div, elements_json):
     Parcours et traitement des balises type blocs
     """
     # Définition des balises block à traiter
-    balisesBlock = ['div'] # ['div', 'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'blockquote', 'table', 'form']
+    balisesBlock = ['div', 'hr', 'h1', 'h2', 'h3']
+    # ['div', 'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'blockquote', 'table', 'form']
 
-# TODO DEMAIN : améliorer/optimiser! Un case? Inverser logique? Un find_all() puis if in balisesblock?
-    for tag_name in balisesBlock:
-            children = div.find_all(tag_name)
+    children = div.find_all(balisesBlock)
+    for child in children:
+        element = None 
+        div_id = generate_random_id()
+        shifting_left = extract_shifting_left(child)
+        div_text = extract_top_level_text(child)
+        div_tag = child.get('id')
 
-            for child in children:
-                # Utilisation de la fonction pour générer un ID aléatoire
-                div_id = generate_random_id()
-                shifting_left = extract_shifting_left(child)
-                div_tag = child.get('id')
-
-                # Récupérer le texte uniquement dans cette div (et pas dans les divs enfants)
-                div_text = child.get_text()
-                element = {
+        # On commence par hr, seul élément sans texte obligatoire
+        if child.name == 'hr':
+            element = {
+                "id": div_id,
+                #"tag": div_tag if div_tag else "",
+                "shifting": shifting_left,
+                "div": { }
+            }
+        # Si on a du texte dans le block, on le traite
+        elif div_text:
+            text = extract_text_with_formatting(child)
+            element = {
                     "id": div_id,
                     #"tag": div_tag if div_tag else "",
                     "shifting": shifting_left,
+                    "text": text
                 }
+            # Traitements spécifiques
+            if child.name == 'div':
+                style = extract_styles(child.get('style'))
+                if 'padding-left' in style:
+                    # Le traitement est déjà fait, on ne fait rien
+                    pass
+                elif '--en-codeblock' in style:
+                    # Traitement à définir plus tard de tous les sous-blocs
+                    pass
+                elif 'text-align' in style:
+                    if style['text-align'] == 'center':
+                        element["align"] = "AlignCenter"
+                    elif style['text-align'] == 'right':
+                        element["align"] = "AlignRight"
+            elif  child.name in ['h1', 'h2', 'h3']:
+                text["style"] = "Header" + child.name[1:]
+            elif child.name in ['ul', 'ol']:
+                # Traitement spécifique du contenu (appel fonction à définir)
+                pass
+                
+                
 
-                # Si pas de texte, on continue (div vide TODO : à changer avec le cas HR)
-                if not div_text:
+        if element is not None:
+            # Trouver le block précédent avec une valeur de style margin-left inférieure
+            for prev_element in elements_json[::-1]:
+                prev_style = prev_element["shifting"]
+                if shifting_left > prev_style:
+                    if "childrenIds" not in prev_element:
+                        prev_element["childrenIds"] = []
+                    prev_element["childrenIds"].append(element["id"])
                     break
+            elements_json.append(element)
 
-                if tag_name == 'h1':
-                    element["style"] = "Header1"
-                elif tag_name == 'h2':
-                    element["style"] = "Header2"
-                elif tag_name == 'h3':
-                    element["style"] = "Header3"
-
-
-                # Trouver la div précédente avec une valeur de style margin-left inférieure
-                for prev_element in elements_json[::-1]:
-                    prev_style = prev_element["shifting"]
-                    if shifting_left > prev_style:
-                        if "childrenIds" not in prev_element:
-                            prev_element["childrenIds"] = []
-                            # Ajouter le layout seulement si c'est le premier enfant
-                            # Apparemment supprimé dans les dernières versions d'AT
-                            # if prev_element["id"] != div_id and prev_element["shifting"] != -1:
-                            #     prev_element["layout"] = {"style": "Div"}
-                        prev_element["childrenIds"].append(element["id"])
-                        break
-
-                elements_json.append(element)
-
-
-
-
-
-
-    # children = div.find_all('div')
-    # for child in children:
-    #     # Utilisation de la fonction pour générer un ID aléatoire
-    #     div_id = generate_random_id()
-    #     shifting_left = extract_shifting_left(child)
-    #     div_tag = child.get('id')
-
-    #     # Récupérer le texte uniquement dans cette div (et pas dans les divs enfants)
-    #     div_text = child.get_text()
-    #     element = {
-    #         "id": div_id,
-    #         #"tag": div_tag if div_tag else "",
-    #         "style": shifting_left,
-    #         "text": extract_text_with_formatting(child) if div_text else ""
-    #     }
-    #     # Trouver la div précédente avec une valeur de style margin-left inférieure
-    #     for prev_element in elements_json[::-1]:
-    #         prev_style = prev_element["style"]
-    #         if shifting_left > prev_style:
-    #             if "childrenIds" not in prev_element:
-    #                 prev_element["childrenIds"] = []
-    #                 # Ajouter le layout seulement si c'est le premier enfant
-    #                 # Apparemment supprimé dans les dernières versions d'AT
-    #                 # if prev_element["id"] != div_id and prev_element["style"] != -1:
-    #                 #     prev_element["layout"] = {"style": "Div"}
-    #             prev_element["childrenIds"].append(element["id"])
-    #             break
-
-        # elements_json.append(element)
-
-    # Retirer la clé "style" à la fin
+    # A la fin, on retire la clé "shifting" 
     for element in elements_json:
         if "shifting" in element:
             del element["shifting"]
@@ -285,8 +340,8 @@ def main():
     elements_json = []
     details_json = {}
 
-    # On traite le contenu d'un fichier xhtml (nommé test.xml)
-    xhtml_file = open('test.xml', 'r', encoding='utf-8')
+    # On traite le contenu d'un fichier xhtml
+    xhtml_file = open('Tests/Test couleurs.enex', 'r', encoding='utf-8')
     xhtml_content = xhtml_file.read()
     xhtml_file.close()
     soup = BeautifulSoup(xhtml_content, 'html.parser')
@@ -321,7 +376,7 @@ def main():
     }
 
     # Enregistrement dans un fichier resultat.json du modèle complété avec les données
-    with open('resultat.json', 'w', encoding='utf-8') as file:
+    with open('Tests/resultat.json', 'w', encoding='utf-8') as file:
         json.dump(page_json, file, indent=2)
 
 if __name__ == "__main__":

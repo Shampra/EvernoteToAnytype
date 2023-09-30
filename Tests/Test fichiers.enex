@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE en-export SYSTEM "http://xml.evernote.com/pub/evernote-export4.dtd">
-<en-export export-date="20231029T182049Z" application="Evernote" version="10.61.10">
+<en-export export-date="20231030T095712Z" application="Evernote" version="10.61.10">
   <note>
     <title>Test fichiers</title>
     <created>20230929T181750Z</created>
-    <updated>20230929T182018Z</updated>
+    <updated>20230930T095617Z</updated>
     <note-attributes>
     </note-attributes>
     <content>
       <![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note><div><br/></div><en-media style="--en-viewAs:attachment;" hash="5afaf79789a776d81ec91ccbdc9fdaba" type="application/pdf" /><div><br/></div><en-media hash="83042023a96f72d6c36d15200d1ba0f4" type="audio/mpeg" /><div><br/></div><en-media hash="3ad0348e19be72239197c6fdcec2df47" type="image/png" style="--en-naturalWidth:1280; --en-naturalHeight:512;" width="497.5px" /><div><br/></div><div><br/></div><en-media style="--en-naturalWidth:340; --en-naturalHeight:280;" hash="2bcd1719d323cf2a281f2db8e7583666" type="image/webp" /><div><br/></div><en-media hash="b39d431faee0e783c1ce4310cfe37771" type="video/vnd.avi" /><div><br/></div></en-note>      ]]>
+<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note><div><br/></div><en-media style="--en-viewAs:attachment;" hash="5afaf79789a776d81ec91ccbdc9fdaba" type="application/pdf" /><div><br/></div><en-media hash="83042023a96f72d6c36d15200d1ba0f4" type="audio/mpeg" /><div><br/></div><en-media hash="3ad0348e19be72239197c6fdcec2df47" type="image/png" style="--en-naturalWidth:1280; --en-naturalHeight:512;" width="497.5px" /><div><br/></div><div><br/></div><en-media style="--en-naturalWidth:340; --en-naturalHeight:280;" hash="2bcd1719d323cf2a281f2db8e7583666" type="image/webp" /><div><br/></div><en-media hash="b39d431faee0e783c1ce4310cfe37771" type="video/vnd.avi" /><div><br/></div><en-media hash="098f6bcd4621d373cade4e832627b4f6" type="text/plain" /><div><br/></div></en-note>      ]]>
     </content>
     <resource>
       <data encoding="base64">
@@ -4626,6 +4626,16 @@ HwEAADAwZGMAAAAAjIoIAB8BAAAwMGRjEAAAALSLCAAwKAAAMDBkYwAAAADsswgA/AEAADAwZGMAAAAA
       <resource-attributes>
         <file-name>sample_640x360.avi</file-name>
         <source-url>en-cache://tokenKey%3D%22AuthToken%3AUser%3A19996138%22+d62fb4c9-2621-9b97-9b53-ec64aa626a9e+b39d431faee0e783c1ce4310cfe37771+https://www.evernote.com/shard/s172/res/838b24f5-d71f-3150-10a4-c3fd98d987eb</source-url>
+      </resource-attributes>
+    </resource>
+    <resource>
+      <data encoding="base64">
+dGVzdA==
+      </data>
+      <mime>text/plain</mime>
+      <resource-attributes>
+        <file-name>test.txt</file-name>
+        <source-url>en-cache://tokenKey%3D%22AuthToken%3AUser%3A19996138%22+d62fb4c9-2621-9b97-9b53-ec64aa626a9e+098f6bcd4621d373cade4e832627b4f6+https://www.evernote.com/shard/s172/res/23ad6c4f-bed2-489a-3bc7-6540fa15bfe6</source-url>
       </resource-attributes>
     </resource>
   </note>
