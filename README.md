@@ -11,7 +11,7 @@ pip install lxml
 - [x] Création du modèle json de base
 - [x] Génération d'ID par div
 - [x] Insertion des éléments des div
-- [ ] Pleine page _(validé, à intégrer au modèle)_
+- [x] Pleine page _(validé, à intégrer au modèle)_
 
 
 **Points d'attention :**
@@ -66,20 +66,19 @@ Evernote exporte la même note de différentes façon si le texte (font) a été
 
 
 **Texte en couleur**
-- [ ] mappage des couleurs EN > AT
+- [x] mappage des couleurs EN > AT
 - [x] style color
 
 **Texte surligné**
-- [ ] mappage des couleurs EN > AT
+- [x] mappage des couleurs EN > AT
 - [x] style background-color
-- [ ] style --en-highlight
 
 ### Détails de la note
 **Titre**
-- [ ] Intégré
+- [ ] Intégration
 
 **Gestion tag**
-- [ ] test via tag spécifique
+- [ ] test via tag spécifique -> **NOK dans AT, bur remonté**
 - [ ] Ajout des tags récupéré à la relation
 - [ ] Ajout des tags à la note
 
@@ -88,7 +87,11 @@ Evernote exporte la même note de différentes façon si le texte (font) a été
 - [ ] Intégration
 
 ### Fichiers
-A venir
+- [x] Décodage
+- [ ] Association au contenu
+- [x] Définition mime et type
+- [ ] Définition taille (image seulement pour AT)
+- [ ] Amélioration : ajout de propriétés? (texte OCR?)
 
 ### Tableau
 A venir

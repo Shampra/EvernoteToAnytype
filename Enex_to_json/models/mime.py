@@ -13,20 +13,20 @@ TYPE = {
         "image/apng",
         "image/bmp"
     ],
-    "Text": [
-        "text/plain",
-        "text/csv",
-        "text/html",
-        "application/msword",
-        "text/css",
-        "application/x-csh",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
-        "application/json",
-        "application/ld+json",
-        "text/comma-separated-values"
-    ],
+    # "Text": [
+    #     "text/plain",
+    #     "text/csv",
+    #     "text/html",
+    #     "application/msword",
+    #     "text/css",
+    #     "application/x-csh",
+    #     "application/msword",
+    #     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    #     "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
+    #     "application/json",
+    #     "application/ld+json",
+    #     "text/comma-separated-values"
+    # ],
     "Video": [
         "video/mp4",
         "video/3gpp",
@@ -54,27 +54,27 @@ TYPE = {
         "audio/x-flac",
         "audio/flac"
     ],
-    "ARCHIVE": [
-        "application/zip",
-        "application/zlib",
-        "application/x-rar-compressed",
-        "application/octet-stream",
-        "application/x-zip-compressed",
-        "multipart/x-zip",
-        "application/x-bzip",
-        "application/x-bzip2",
-        "application/gzip",
-        "application/vnd.rar",
-        "application/java-archive",
-        "application/x-tar",
-        "application/x-7z-compressed"
-    ],
-    "TABLE": [
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    ],
-    "PRESENTATION": [
-        "application/vnd.ms-powerpoint",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-    ],
+    # "ARCHIVE": [
+    #     "application/zip",
+    #     "application/zlib",
+    #     "application/x-rar-compressed",
+    #     "application/octet-stream",
+    #     "application/x-zip-compressed",
+    #     "multipart/x-zip",
+    #     "application/x-bzip",
+    #     "application/x-bzip2",
+    #     "application/gzip",
+    #     "application/vnd.rar",
+    #     "application/java-archive",
+    #     "application/x-tar",
+    #     "application/x-7z-compressed"
+    # ],
+    # "TABLE": [
+    #     "application/vnd.ms-excel",
+    #     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    # ],
+    # "PRESENTATION": [
+    #     "application/vnd.ms-powerpoint",
+    #     "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    # ],
 }
