@@ -1,101 +1,95 @@
 # EvernoteToAnytype - IN DEVELOPMENT!
-Enex to JSON converter, for export Evernote to Anytype
+Enex to JSON converter, for export Evernote note to Anytype
 
-### Environnement 
+### Environment
 ```
 pip install beautifulsoup4
 pip install lxml
+pip install scipy
 ```
 
-### Définition générale
-- [x] Création du modèle json de base
-- [x] Génération d'ID par div
-- [x] Insertion des éléments des div
-- [x] Pleine page _(validé, à intégrer au modèle)_
+### General Definition
+- [x] Creation of the basic JSON model -> Update : as a class
+- [x] Generation of ID for blocks
+- [x]  Insertion of elements from divs, as a type page, with full width
 
 
 **Points d'attention :**
-Evernote exporte la même note de différentes façon si le texte (font) a été modifié, si la version est différente (legacy vs modern)...
-- Imbrication de div (sans réalité dans la note)
-- utilisation de style sur span ou de balise i,u,s,...
+Evernote exports are not clean (especially between Legacy and version 10): variations in the method for the same style, unnecessary divs, etc.
 
-### Blocs (EN) spécifiques et mise en forme du bloc
+### Specific Evernote Blocks and Block Formatting
 
-- [ ] **Liste à puce**
-- [ ] **Liste numérotée**
+**List**
+- [ ] **Bullet List**
+- [ ] **Numbered List**
+- [ ] Checklist : Checked and Unchecked
 
-**Liste case à cocher**
-- [ ] cochée
-- [ ] décochée
 
-**Alignement**
-- [x] centré
-- [x] à droite
+**Alignment**
+- [x] Centered and Right
 
-**Titres**
-- [x] H1
-- [x] H2
-- [x] H3
 
-- [x] Séparateur hr
+**Titles**
+- [x] H1 , H2, H3, Hx (if...)
 
-**Bloc de code**
-- [ ] Test format AT
-- [ ] Choix langage...
-- [ ] Gestion sauts de lignes
-- [ ] Gestion espaces
 
-### Mise en forme du texte inline
-- [x] Gestion doublons
+- [x] Horizontal Separator
 
-**Texte en italique**
-- [x] via i
-- [x] via <span> style
+**Code Block**
+- [ ] Testing AT format 
+- [ ] Language selection...
+- [ ] Handling line breaks
+- [ ] Handling spaces
 
-**Texte en gras**
-- [x] via b
-- [x] via <span> style
+### Inline Text Formatting
+- [x] Handling duplicates
+- [x] Italic
+- [x] Bold
+- [x] Underligne
+- [x] Strike
 
-**Texte souligné**
-- [x] via i
-- [x] via <span> style
 
-**Texte décalé**
-**_(création de blocs enfant)_**
+**Indented Text**
+**_(creation of child blocks)_**
 - [x] via margin-left
 
 
-**Texte en couleur**
-- [x] mappage des couleurs EN > AT
-- [x] style color
+**Colors**
+- [x] EN to AT color mapping
+- [x] color style
+- [x] background-color style
 
-**Texte surligné**
-- [x] mappage des couleurs EN > AT
-- [x] style background-color
 
-### Détails de la note
-**Titre**
+### Note Details
+**Title**
 - [ ] Intégration
 
-**Gestion tag**
-- [ ] test via tag spécifique -> **NOK dans AT, bur remonté**
-- [ ] Ajout des tags récupéré à la relation
-- [ ] Ajout des tags à la note
+**Tag Management**
+- [ ] AT testing using specific tags **-> Bug in AT, issue reported**
+- [ ] Adding retrieved tags to relation
+- [ ] Adding tags to the note
 
-**Date création**
+**Creation Date**
 - [ ] Format
-- [ ] Intégration
+- [ ] Integration
 
-### Fichiers
-- [x] Décodage
-- [ ] Association au contenu
-- [x] Définition mime et type
-- [ ] Définition taille (image seulement pour AT)
-- [ ] Amélioration : ajout de propriétés? (texte OCR?)
+### Files
+- [x] Decoding files from EN
+- [X] Association with content
+- [x] Define mime, type,...
+- [X] Define embed or linked
+- [X] Import file **-> Bug in AT, issue reported**
 
-### Tableau
-A venir
+
+### Table
+Coming soon, need to check how it's work
+
+### Generla
+- [X] Treat enex folder
+- [X] User parameter
+- [X] Notebook management
 
 ### Autres
-Intégration de tâches?
-Intégration des embed -> Inexistant dans AT actuellement
+- Task integration?
+- Embed integration of link -> Non-existent in AT currently
+- Adding more properties for file ? (OCR text?)
