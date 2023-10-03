@@ -1,16 +1,16 @@
 from bs4 import BeautifulSoup
 import json
 import random
-import string
+import xml.etree.ElementTree as ET
 from scipy.spatial import cKDTree
 import models.mime
 import hashlib
 import os
-
 import base64
-import sys
-
 import json
+import re
+
+
 
 class PageModel:
     def __init__(self):
@@ -82,7 +82,6 @@ class PageModel:
             print(f"Erreur, block {parent_id} inexistant lors de l'ajout d'enfant {div_id}")
         
 
-
     def add_block(self, block_id, shifting, width=None, align=None, text=None):
         """Création d'un blocs avec gestion parent/enfant ou 1er bloc
 
@@ -121,7 +120,7 @@ class PageModel:
         if text is not None:
             block["div"] = {"text": text}
         self.page_json["snapshot"]["data"]["blocks"].append(block)
- 
+
 
     def edit_block_key(self, block_id, key, value):
         """Ajoute une clé ou modifie sa valeur dans le bloc ciblé
@@ -154,7 +153,7 @@ class PageModel:
                 print("Clé text manquante, elle doit être créé avant de la modifier!")
         else:
             print(f"Erreur, block {block_id} inexistant lors de l'ajout de texte")
-         
+
 
     def add_text_to_block(self, block_id, text=None, block_style=None, div=None):
         """Ajout d'une clé text au bon format
@@ -185,8 +184,7 @@ class PageModel:
             print(f"Erreur, block {block_id} inexistant lors de l'ajout de texte")
 
 
-
-    def add_mark_to_text(self, block_id, start, end, mark_type=None, mark_param=None):
+    def add_mark_to_text(self, block_id, start, end, mark_type = None, mark_param = None):
         block = self.find_block_by_id(block_id)
         if block and "text" in block:
             if "marks" not in block["text"]["marks"]:
@@ -200,7 +198,29 @@ class PageModel:
         else:
             print(f"Erreur, block {block_id} inexistant lors de l'ajout de mark")
 
-      
+
+    def add_file_to_block(self, block_id, hash, name, file_type, mime, size, embed_size = None, format = None):
+        block = self.find_block_by_id(block_id)
+        if block:
+            block["file"] = {} 
+            block["file"]["hash"] = hash
+            block["file"]["name"] = name
+            block["file"]["type"] = file_type
+            block["file"]["mime"] = mime
+           # block["file"]["size"] = size
+            if embed_size is not None:
+                #TODO
+                pass
+            if format == "link":
+                block["file"]["style"] = "Link"
+            # Les images ont toujours un style défini
+            elif file_type == "Image":
+                block["file"]["style"] = "Embed"
+            block["file"]["state"] = "Done"
+            pass
+        else:
+            print(f"Erreur, block {block_id} inexistant lors de l'ajout de fichier")
+
 
     def cleanup(self):
         # Supprimer toutes les clés "shifting" de chaque bloc à la fin
@@ -208,9 +228,16 @@ class PageModel:
             if "shifting" in block:
                 del block["shifting"]
 
+
     def to_json(self):
         return self.page_json
 
+
+def sanitize_filename(filename):
+    invalid_chars = '/\\?%*:|"<>'
+    for char in invalid_chars:
+        filename = filename.replace(char, '_')
+    return filename
 
 def generate_random_id():
     """Génère un identifiant aléatoire en hexadécimal de la longueur spécifiée""" 
@@ -289,13 +316,13 @@ def extract_styles(style_string):
     """
     style_dict = {}
     if style_string:
-        # Divisez la chaîne de style en une liste de styles et de valeurs
-        styles = [style.strip() for style in style_string.split(';') if style.strip()]
-
-        # Créez un dictionnaire pour stocker les styles et leurs valeurs
-        for style in styles:
-            style_name, style_value = style.split(':')
-            style_dict[style_name.strip()] = style_value.strip()
+        # Cas particuliers à gérer :
+        ## href:https://example.com
+        ## et les background:(...) url(&quot;data:image/svg+xml;base64,PHN2ZyB3(...)
+        style_pairs = re.findall(r'([^:]+):([^;]+);', style_string)
+        for key, value in style_pairs:
+                style_dict[key.strip()] = value.strip()
+            
     return style_dict
 
 
@@ -373,7 +400,7 @@ def extract_top_level_text(element):
     return ''.join(result)
 
 
-def get_files(xml_file, dest_folder):
+def get_files(xml_content, dest_folder):
     """_summary_
 
     Args:
@@ -385,8 +412,7 @@ def get_files(xml_file, dest_folder):
     """
     files_info_dict = {} 
 
-    tree = ET.parse(xml_file)
-    root = tree.getroot()
+    root = ET.fromstring(xml_content)
     for resource in root.findall('.//resource'):
         # Récupérer les éléments de la ressource
         data_elem = resource.find("./data")
@@ -406,18 +432,19 @@ def get_files(xml_file, dest_folder):
                     file_type = "File"
 
             file_name = attributes_elem.find("./file-name").text.strip()
+            sanitized_filename = sanitize_filename(file_name)
             data_decode = base64.b64decode(data_base64)
             # Calculer le hash (MD5) du contenu
             hash_md5 = hashlib.md5(data_decode).hexdigest()
 
-            destination_path = os.path.join(dest_folder, file_name)
+            destination_path = os.path.join(dest_folder, sanitized_filename)
             if not os.path.exists(dest_folder):
                 os.makedirs(dest_folder)
             with open(destination_path, 'wb') as outfile:
                 outfile.write(data_decode)
             file_size = os.path.getsize(destination_path) * 8
 
-            files_info_dict[hash_md5] = (file_name, mime, file_size, file_type)
+            files_info_dict[hash_md5] = (sanitized_filename, mime, file_size, file_type)
 
     return files_info_dict
 
@@ -449,7 +476,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: PageModel):
     
     if div_text:
         # Ajout du block text
-        print(div_text)
+        #print(div_text)
         page_model.add_text_to_block(div_id, text=div_text)
         pass
         
@@ -459,7 +486,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: PageModel):
             tag_object=element['tag_object']
             tag_name = tag_object.name
 
-            print(f"'tag_name': {tag_name}, 'text': {div_text}, 'start': {start}, 'end': {end}")
+            #print(f"'tag_name': {tag_name}, 'text': {div_text}, 'start': {start}, 'end': {end}")
 
             formatting_type = None
             param = None
@@ -490,7 +517,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: PageModel):
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             
 
-def process_content_to_json(content, page_model):
+def process_content_to_json(content, page_model, files_dict):
     """
     Processing <content> to create the parent element and calling a function for child elements
     """
@@ -508,14 +535,13 @@ def process_content_to_json(content, page_model):
         page_model.add_text_to_block(id,first_text[0].strip())
 
 
-    process_div_children(root_block, page_model)
+    process_div_children(root_block, page_model, files_dict)
 
 
-def process_div_children(div, page_model: PageModel):
+def process_div_children(div, page_model: PageModel, files_dict):
     # Définition des balises block à traiter
     balisesBlock = ['div', 'hr', 'h1', 'h2', 'h3','en-media']
     # ['div', 'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'blockquote', 'table', 'form']
-
     children = div.find_all(balisesBlock)
     for child in children:
         div_id = generate_random_id()
@@ -529,8 +555,31 @@ def process_div_children(div, page_model: PageModel):
             page_model.edit_block_key(div_id, "div",{})
         # Traitement des fichiers à intégrer
         elif child.name == 'en-media':
-            # insert_files()
-            pass
+            hash = child.get('hash')
+            print(hash)
+            if hash in files_dict:
+                sanitized_filename, mime, file_size, file_type = files_dict[hash]
+                # Redimensionné? Il faut retourner width="340px" divisé par style="--en-naturalWidth:1280"  style="--en-naturalWidth:1280; --en-naturalHeight:512;" width="340px" />
+                text_style = child.get('style')
+                styles = extract_styles(text_style) if text_style else {}
+                
+                embed_width = child.get('width')
+                original_width = int(styles.get("--en-naturalWidth", "0"))
+                
+                relative_width = None  
+                if embed_width is not None and original_width is not None and original_width is not 0:
+                    relative_width = int(embed_width.replace("px", "")) / original_width
+                # Format lien? 
+                style_attr = child.get('style')
+                format = 'link' if style_attr and '--en-viewAs:attachment;' in style_attr else None
+                page_model.add_block(div_id, shifting=shifting_left)
+                page_model.add_file_to_block(div_id, hash = hash, name = sanitized_filename, file_type = file_type, mime = mime, size = file_size, embed_size = relative_width, format=format )
+            
+            
+            
+            
+            
+            
         # Traitement des blocs demandant du contenu texte
         elif div_text:
             page_model.add_block(div_id, shifting=shifting_left)
@@ -582,14 +631,18 @@ def main():
         
         soup = BeautifulSoup(xhtml_content, 'html.parser')
         
+        # Traitement des fichiers (base64 vers fichiers)
+        files_dest_folder = os.path.join(enex_directory, "files")
+        files_dict = get_files(xhtml_content, files_dest_folder)
+        
         # Utilisation de la classe PageModel pour créer le JSON
         page_model: PageModel = PageModel()
 
         # Extraction du contenu de la balise <content> et traitement
         content = soup.find('content').text
-        process_content_to_json(content, page_model)
+        process_content_to_json(content, page_model, files_dict)
         
-        # Traitement des fichiers (base64 vers fichiers)
+        
 
         # Traitement des balises du fichier (sauf <content>)
         # details_json = process_details_to_json(xhtml_content, details_json)
