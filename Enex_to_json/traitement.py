@@ -118,9 +118,14 @@ class PageModel:
         if align is not None:
             block["align"] = align
         if text is not None:
-            block["div"] = {"text": text}
+            block["text"] = {"text": text, "marks": {}}
         self.page_json["snapshot"]["data"]["blocks"].append(block)
 
+
+    def edit_details_key(self, key, value):
+        """Ajoute une clé ou modifie sa valeur dans les détails"""
+        self.page_json["snapshot"]["data"]["details"][key] = value
+        pass
 
     def edit_block_key(self, block_id, key, value):
         """Ajoute une clé ou modifie sa valeur dans le bloc ciblé
@@ -133,6 +138,17 @@ class PageModel:
         block = self.find_block_by_id(block_id)
         if block:
             block[key] = value
+            # Modification du shifting, on traite
+            # TODO : attention, si c'est modification il faudrait aussi retirer l'id de l'ancien parent!
+            if "shifting" in key:
+                # Trouve l'id précédent 
+                
+                # Puis trouver le nouveau parent
+                parent_id = self.find_parent_id(value)
+                if parent_id:
+                    self.add_children_id(parent_id, block_id)
+                else:
+                    print("erreur pas de parent")
             return
         
         
@@ -207,7 +223,7 @@ class PageModel:
             block["file"]["name"] = name
             block["file"]["type"] = file_type
             block["file"]["mime"] = mime
-           # block["file"]["size"] = size
+            # block["file"]["size"] = size
             if embed_size is not None:
                 #TODO
                 pass
@@ -238,6 +254,7 @@ def sanitize_filename(filename):
     for char in invalid_chars:
         filename = filename.replace(char, '_')
     return filename
+
 
 def generate_random_id():
     """Génère un identifiant aléatoire en hexadécimal de la longueur spécifiée""" 
@@ -459,10 +476,12 @@ def get_list(tag):
 
 
 # TODO - vide
-def process_details_to_json(content):
-    """
-    Récupére le détail de la note
-    """
+def process_details_to_json(content, page_model: PageModel):
+    """ Récupére le détail de la note """
+    title = content.find("title").get_text()
+    page_model.edit_details_key("name", title)
+    created_date = content.find("created")
+    print(title)
     pass
 
 
@@ -540,8 +559,7 @@ def process_content_to_json(content, page_model, files_dict):
 
 def process_div_children(div, page_model: PageModel, files_dict):
     # Définition des balises block à traiter
-    balisesBlock = ['div', 'hr', 'h1', 'h2', 'h3','en-media']
-    # ['div', 'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'blockquote', 'table', 'form']
+    balisesBlock = ['div', 'hr', 'br', 'h1', 'h2', 'h3','en-media']
     children = div.find_all(balisesBlock)
     for child in children:
         div_id = generate_random_id()
@@ -549,10 +567,12 @@ def process_div_children(div, page_model: PageModel, files_dict):
         div_text = extract_top_level_text(child)
         div_tag = child.get('id')
 
-        # On commence par hr, seul élément sans texte obligatoire
+        # On commence par les blocs sans texte
         if child.name == 'hr':
             page_model.add_block(div_id, shifting=shifting_left)
             page_model.edit_block_key(div_id, "div",{})
+        elif child.name == 'br':
+            page_model.add_block(div_id, shifting=shifting_left,text = "")
         # Traitement des fichiers à intégrer
         elif child.name == 'en-media':
             hash = child.get('hash')
@@ -575,17 +595,34 @@ def process_div_children(div, page_model: PageModel, files_dict):
                 page_model.add_block(div_id, shifting=shifting_left)
                 page_model.add_file_to_block(div_id, hash = hash, name = sanitized_filename, file_type = file_type, mime = mime, size = file_size, embed_size = relative_width, format=format )
             
-            
-            
+                # TODO : quand AnyType permettra l'import des fichiers            
             
             
             
         # Traitement des blocs demandant du contenu texte
         elif div_text:
-            page_model.add_block(div_id, shifting=shifting_left)
-            extract_text_with_formatting(child, div_id, page_model)
+            
             # Traitements spécifiques
-            if child.name == 'div':
+            if child.name in ['div', 'h1', 'h2', 'h3']:
+                # Traitement spécifique pour les listes!
+                parent_list = child.find_parent(['ol', 'ul'])
+                if parent_list:
+                    #Est-ce dans une liste imbriquée? 1ère étape pouvoir pouvoir placer le childrenIds!
+                    #TODO
+                    # TODO : ajout imbrication à l'imbrication existante? Si padding = 40 et imbrication 40 : traiter comme 80?
+                    #        A tester quels cas EN peut générer...
+                    nested_level = len(parent_list.find_parents(['ol', 'ul']))
+                    if nested_level > 0:
+                        # On va traiter comme les blocs décalés...
+                        shifting_left = 40 * (nested_level)
+                
+                # Puis on créé le bloc
+                page_model.add_block(div_id, shifting=shifting_left)
+                
+                # Traitement texte
+                extract_text_with_formatting(child, div_id, page_model)
+                
+                # Traitements styles du bloc
                 style = extract_styles(child.get('style'))
                 if 'padding-left' in style:
                     # Le traitement est déjà fait, on ne fait rien
@@ -598,18 +635,26 @@ def process_div_children(div, page_model: PageModel, files_dict):
                         page_model.edit_block_key(div_id,"align","AlignCenter")
                     elif style['text-align'] == 'right':
                         page_model.edit_block_key(div_id,"align","AlignRight")
-                        
-                        # TODO : ajout d'élément à text
-                        # PAREIL AU DESSUS
-                        # PUIS VIRER element
-                        
-                        
-            elif  child.name in ['h1', 'h2', 'h3']:
-                page_model.edit_text_key(div_id,"style","Header" + child.name[1:])
-            elif child.name in ['ul', 'ol']:
-                # Traitement spécifique du contenu (appel fonction à définir)
-                # get_list(child, element)
-                pass
+
+                # Et style si c'est une liste
+                if parent_list:
+                    checked = False 
+                    if parent_list.name == 'ol':
+                        style_liste = 'Numbered'
+                    elif parent_list.name == 'ul' and parent_list.has_attr('style') and '--en-todo:true' in parent_list['style']:
+                        style_liste = 'Checkbox'
+                        li_parent = child.find_parent('li')
+                        if li_parent and li_parent.has_attr('style') and '--en-checked:true' in li_parent['style']:
+                            page_model.edit_text_key(div_id,"checked",True)
+                    else:
+                        style_liste = 'Marked'
+                    page_model.edit_text_key(div_id,"style",style_liste)
+                
+                # et style des titres
+                if  child.name in ['h1', 'h2', 'h3']:
+                    page_model.edit_text_key(div_id,"style","Header" + child.name[1:])
+            
+                
 
 
 def main():
@@ -645,7 +690,7 @@ def main():
         
 
         # Traitement des balises du fichier (sauf <content>)
-        # details_json = process_details_to_json(xhtml_content, details_json)
+        process_details_to_json(soup,page_model)
 
         # Nettoyer les clés "shifting" si nécessaire
         page_model.cleanup()
