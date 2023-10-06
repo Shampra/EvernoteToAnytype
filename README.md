@@ -26,7 +26,7 @@ Evernote exports are not clean (especially between Legacy and version 10): varia
 - [x] **Indented Text** via margin-left and in subList
 - [x] **Colors** EN to AT color mapping; color style and background-color style
 
-- [ ] **Détails** Title intégration
+- [x] **Détails** Title intégration
 
 - [x] **Files** : Decoding files from EN, association with content, define mime/type/..., define embed or linked
 
@@ -36,8 +36,11 @@ Evernote exports are not clean (especially between Legacy and version 10): varia
 - [ ] **Files** : Import file **-> Bug in AT, issue reported**
 - [ ] **Tag Management** AT testing using specific tags **-> Bug in AT, issue reported**
 
-- [ ] **List** case with <en-todo checked="false" />
+- [ ] **List** case with `<en-todo checked="false" />`
 - [ ] **Détails** Creation date (format and integration)
+
+- [ ] **BUG? Link doesn't work anymore!**
+
 
 **Code Block**
 - [ ] Testing AT format 
@@ -45,7 +48,7 @@ Evernote exports are not clean (especially between Legacy and version 10): varia
 - [ ] Handling line breaks
 - [ ] Handling spaces
 
-**Code Block**
+**Tables**
 Coming soon, need to check how it's work
 
 - [ ] **use** User parameter, Notebook management

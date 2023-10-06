@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE en-export SYSTEM "http://xml.evernote.com/pub/evernote-export4.dtd">
+<en-export export-date="20231106T201628Z" application="Evernote" version="10.61.10">
+  <note>
+    <title>Emoji test</title>
+    <created>20231005T075641Z</created>
+    <updated>20231006T201624Z</updated>
+    <note-attributes>
+    </note-attributes>
+    <content>
+      <![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note><div><b>Emoji?</b></div><div>❌A red cross</div><div>⚠ Careful</div><div>✅Done</div><div>🛠Tools</div><div>😀Happy</div><div><br/></div><div><br/></div><div><br/></div></en-note>      ]]>
+    </content>
+  </note>
+</en-export>
