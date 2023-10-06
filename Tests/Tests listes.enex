@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE en-export SYSTEM "http://xml.evernote.com/pub/evernote-export4.dtd">
-<en-export export-date="20231029T215306Z" application="Evernote" version="10.61.10">
+<en-export export-date="20231106T134556Z" application="Evernote" version="10.63.3">
   <note>
     <title>Tests listes</title>
     <created>20230929T215107Z</created>
-    <updated>20230929T215231Z</updated>
+    <updated>20231006T134527Z</updated>
     <note-attributes>
     </note-attributes>
     <content>
       <![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note><div>Liste à puces</div><ul><li><div>item1</div></li><ul><li><div>item1 bis</div></li></ul><li><div>item2</div></li></ul><div><br/></div><div>Liste numérotée</div><ol><li><div><b>item1 gras</b></div></li><ol><li><div><b>item1 bis toujours gras</b></div></li></ol><li><div>item2</div></li></ol><div><br/></div><div>Liste checkbox</div><ul style="--en-todo:true;"><li><div>Non cochée</div></li><ul style="--en-todo:true;"><li style="--en-checked:false;"><div>Décalée et <b>gras</b></div></li></ul><li style="--en-checked:false;"><div>Cochée</div></li></ul></en-note>      ]]>
+<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note><div>Liste à puces</div><ul><li><div>item1</div></li><ul><li><div>item1 bis</div></li></ul><li><div>item2</div></li></ul><div><br/></div><div>Liste numérotée</div><ol><li><div><b>item1 gras</b></div></li><ol><li><div><b>item1 bis toujours gras</b></div></li></ol><li><div>item2</div></li></ol><div><br/></div><div>Liste checkbox</div><ul style="--en-todo:true;"><li><div>Non cochée</div></li><ul style="--en-todo:true;"><li style="--en-checked:false;"><div>Décalée et <b>gras</b></div></li></ul><li style="--en-checked:true;"><div style="text-align:center;">Cochée et centrée</div></li></ul><div><br/></div><div>Plus compliqué: un bloc</div><div style="padding-left:40px;">Un bloc décalé</div><ul><ul><li><div>Une liste</div></li><ul><li><div>Une liste décalée</div></li></ul></ul></ul><div><br/></div></en-note>      ]]>
     </content>
   </note>
 </en-export>
