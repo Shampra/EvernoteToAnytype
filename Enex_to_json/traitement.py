@@ -10,6 +10,8 @@ import base64
 import json
 import re
 
+from models.language_patterns import language_patterns
+from pygments.lexers import guess_lexer
 
 
 class PageModel:
@@ -137,18 +139,21 @@ class PageModel:
         """
         block = self.find_block_by_id(block_id)
         if block:
-            block[key] = value
-            # Modification du shifting, on traite
-            # TODO : attention, si c'est modification il faudrait aussi retirer l'id de l'ancien parent!
-            if "shifting" in key:
-                # Trouve l'id précédent 
-                
-                # Puis trouver le nouveau parent
-                parent_id = self.find_parent_id(value)
-                if parent_id:
-                    self.add_children_id(parent_id, block_id)
-                else:
-                    print("erreur pas de parent")
+            if key == "fields":
+                block["fields"] =  {"lang": value}
+            else:
+                block[key] = value
+                # Modification du shifting, on traite
+                # TODO : attention, si c'est modification il faudrait aussi retirer l'id de l'ancien parent!
+                if "shifting" in key:
+                    # Trouve l'id précédent 
+                    
+                    # Puis trouver le nouveau parent
+                    parent_id = self.find_parent_id(value)
+                    if parent_id:
+                        self.add_children_id(parent_id, block_id)
+                    else:
+                        print("erreur pas de parent")
             return
         
         
@@ -466,15 +471,6 @@ def get_files(xml_content, dest_folder):
     return files_info_dict
 
 
-def get_list(tag):
-    # <ul/ol [style]><li [style]><div>
-    # Nettoyer en virant les div
-    # Vérifier sur AT comment sont géré les numérotations pour les listes numérotées
-    # Traiter ul/ol [style] en récupérant l'info du type de liste puis passer à li
-    # Traiter li, si style="--en-checked:true;" = case à cocher, sinon...
-    pass
-
-
 # TODO - vide
 def process_details_to_json(content, page_model: PageModel):
     """ Récupére le détail de la note """
@@ -482,6 +478,49 @@ def process_details_to_json(content, page_model: PageModel):
     page_model.edit_details_key("name", title)
     created_date = content.find("created")
     print(title)
+    pass
+
+
+def process_codeblock(content, div_id, page_model: PageModel):
+    """Process code block with all content including children div
+    
+    Args:
+        content (_type_): _description_
+        page_model (PageModel): _description_
+    """
+    extracted_text = ""
+    for div_child in content.find_all(['div', 'br']):
+        if div_child.name == 'br':  # Vérifie si le contenu de la div enfant est vide.
+            extracted_text += "\n"  # Remplacez le contenu par "\
+        elif not div_child.text.strip():
+            pass
+        else:
+            extracted_text += div_child.get_text()
+            # Sometimes EN add /n at the end of div/line, sometimes not...
+            if not extracted_text.endswith("\n"):
+                extracted_text += "\n"
+            
+    # Estimation du type de langage
+    text_language = None
+    max_occurrences = 0
+    for lang, patterns in language_patterns.items():
+        occurrences = 0
+        for pattern in patterns:
+            for result in re.findall(pattern, extracted_text):
+                print(f"--- {lang}: {result}")
+            occurrences += len(re.findall(pattern, extracted_text))
+        
+        # Mise à jour de text_language si le nombre d'occurrences est plus élevé
+        if occurrences > max_occurrences:
+            max_occurrences = occurrences
+            text_language = lang
+  
+    shifting_left = extract_shifting_left(content)
+    page_model.add_block(div_id, shifting=shifting_left, text = extracted_text)
+    page_model.edit_text_key(div_id, "style", "Code")
+    page_model.edit_block_key(div_id,"fields",text_language)
+    
+    print(extracted_text)
     pass
 
 
@@ -544,14 +583,10 @@ def process_content_to_json(content, page_model, files_dict):
     # Créer l'élément JSON pour la première div (shifting = -1)
     root_block = soup.find('en-note')
     block_id = generate_random_id()
-
-    # Ajouter le premier élément au modèle PageModel
     page_model.add_block(block_id,-1)
-
     first_text = root_block.find_all(string=True, recursive=False)
     if first_text:
         page_model.add_text_to_block(id,first_text[0].strip())
-
 
     process_div_children(root_block, page_model, files_dict)
 
@@ -571,7 +606,7 @@ def process_div_children(div, page_model: PageModel, files_dict):
             page_model.add_block(div_id, shifting=shifting_left)
             page_model.edit_block_key(div_id, "div",{})
         elif child.name == 'br':
-            page_model.add_block(div_id, shifting=shifting_left,text = "")
+            page_model.add_block(div_id, shifting=shifting_left, text = "")
         # Traitement des fichiers à intégrer
         elif child.name == 'en-media':
             hash = child.get('hash')
@@ -595,14 +630,17 @@ def process_div_children(div, page_model: PageModel, files_dict):
                 page_model.add_file_to_block(div_id, hash = hash, name = sanitized_filename, file_type = file_type, mime = mime, size = file_size, embed_size = relative_width, format=format )
             
                 # TODO : quand AnyType permettra l'import des fichiers            
-            
-            
-            
+        # Traitement bloc code (div racine sans texte)
+        elif child.name == 'div' and 'style' in child.attrs and '--en-codeblock:true' in child['style']:
+                process_codeblock(child, div_id, page_model)
         # Traitement des blocs demandant du contenu texte
         elif div_text:
-            
+            # les div enfant des blocs codes doivent être exclues du traitement global
+            parent_div = child.find_parent('div')
+            if child.name == 'div' and parent_div and 'style' in parent_div.attrs and '--en-codeblock:true' in parent_div['style']:
+                pass
             # Traitements spécifiques
-            if child.name in ['div', 'h1', 'h2', 'h3']:
+            elif child.name in ['div', 'h1', 'h2', 'h3']:
                 # Traitement spécifique pour les listes!
                 parent_list = child.find_parent(['ol', 'ul'])
                 if parent_list:
@@ -662,7 +700,7 @@ def main():
     enex_directory = 'Tests/'
     
     # Liste des fichiers enex dans le répertoire
-    enex_files = [f for f in os.listdir(enex_directory) if f.endswith('bug.enex')]
+    enex_files = [f for f in os.listdir(enex_directory) if f.endswith('code.enex')]
 
     for enex_file in enex_files:
         # Construire le chemin complet du fichier enex

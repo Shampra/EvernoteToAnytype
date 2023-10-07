@@ -28,6 +28,7 @@ Evernote exports are not clean (especially between Legacy and version 10): varia
 - [x] **Détails** Title intégration
 
 - [x] **Files** : Decoding files from EN, association with content, define mime/type/..., define embed or linked
+- [x]  **Code Block** : Integration, basic language detection
 
 - [X] **Usage** Treat enex folder
 
@@ -40,18 +41,13 @@ Evernote exports are not clean (especially between Legacy and version 10): varia
 - [ ] **Usage** User parameter, Notebook management
 
 
-**Code Block**
-- [ ] Testing AT format 
-- [ ] Language selection...
-- [ ] Handling line breaks
-- [ ] Handling spaces
-
 **Tables**
 Coming soon, need to check how it's work
 
 
 
 ### Other
+- **Code Block** Better language detection?
 - Task integration?
 - Embed integration of link -> Non-existent in AT currently
 - Adding more properties for file ? (OCR text?)
