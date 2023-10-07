@@ -39,8 +39,6 @@ Evernote exports are not clean (especially between Legacy and version 10): varia
 - [ ] **Détails** Creation date (format and integration)
 - [ ] **Usage** User parameter, Notebook management
 
-- [ ] **BUG? Link doesn't work anymore!**
-
 
 **Code Block**
 - [ ] Testing AT format 

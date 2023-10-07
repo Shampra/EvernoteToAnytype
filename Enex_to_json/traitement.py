@@ -504,7 +504,6 @@ def extract_text_with_formatting(div_content, div_id, page_model: PageModel):
             end = element['end']
             tag_object=element['tag_object']
             tag_name = tag_object.name
-
             #print(f"'tag_name': {tag_name}, 'text': {div_text}, 'start': {start}, 'end': {end}")
 
             formatting_type = None
@@ -530,7 +529,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: PageModel):
                 param = extract_color_from_style(styles["background-color"])
             elif tag_name == 'a':
                 formatting_type = "Link"
-                param = element.get('href')
+                param = tag_object.get('href')
                 
             if param or formatting_type:
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
@@ -663,7 +662,7 @@ def main():
     enex_directory = 'Tests/'
     
     # Liste des fichiers enex dans le répertoire
-    enex_files = [f for f in os.listdir(enex_directory) if f.endswith('.enex')]
+    enex_files = [f for f in os.listdir(enex_directory) if f.endswith('bug.enex')]
 
     for enex_file in enex_files:
         # Construire le chemin complet du fichier enex
