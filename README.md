@@ -8,16 +8,14 @@ pip install lxml
 pip install scipy
 ```
 
-### General Definition
+
+**Points to consider :**
+Evernote exports are not clean (especially between Legacy and version 10): variations in the method for the same style, unnecessary divs, etc.
+
+## Done
 - [x] Creation of the basic JSON model -> Update : as a class
 - [x] Generation of ID for blocks
 - [x]  Insertion of elements from divs, as a type page, with full width
-
-
-**Points d'attention :**
-Evernote exports are not clean (especially between Legacy and version 10): variations in the method for the same style, unnecessary divs, etc.
-
-### Done
 - [x] **Block alignement** : Centered and Right
 - [x] **Titles** : H1 , H2, H3, Hx (if...)
 - [x] Horizontal Separator and empty line
@@ -25,19 +23,21 @@ Evernote exports are not clean (especially between Legacy and version 10): varia
 - [x] **List** (with ul/ol) : Bullet, Numbered, Checklist (Checked and Unchecked)
 - [x] **Indented Text** via margin-left and in subList
 - [x] **Colors** EN to AT color mapping; color style and background-color style
+- [x] Emoji
 
 - [x] **Détails** Title intégration
 
 - [x] **Files** : Decoding files from EN, association with content, define mime/type/..., define embed or linked
 
-- [X] **use** Treat enex folder
+- [X] **Usage** Treat enex folder
 
-### TODO
+## TODO
 - [ ] **Files** : Import file **-> Bug in AT, issue reported**
 - [ ] **Tag Management** AT testing using specific tags **-> Bug in AT, issue reported**
 
 - [ ] **List** case with `<en-todo checked="false" />`
 - [ ] **Détails** Creation date (format and integration)
+- [ ] **Usage** User parameter, Notebook management
 
 - [ ] **BUG? Link doesn't work anymore!**
 
@@ -51,7 +51,6 @@ Evernote exports are not clean (especially between Legacy and version 10): varia
 **Tables**
 Coming soon, need to check how it's work
 
-- [ ] **use** User parameter, Notebook management
 
 
 ### Other
