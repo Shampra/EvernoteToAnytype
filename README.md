@@ -1,6 +1,8 @@
 # EvernoteToAnytype - IN DEVELOPMENT!
 Enex to JSON converter, for export Evernote note to Anytype
 
+
+
 ### Environment
 ```
 pip install beautifulsoup4
@@ -8,52 +10,36 @@ pip install lxml
 pip install scipy
 ```
 
+For packaged version :
+```
+pip install PyInstaller 
+pyinstaller main.py --additional-hooks-dir=.
+```
+
+
+## Usage
+- Launch the gui with "main" file
+- drop your enex fils to convert (or a folder with them inside) or select them with the button
+- clic to Convert
+A _Converted_files_  is created in the folder of your enex files, containing the converted files.
+
+**Warning**
+It's under progress. 
+Particularly, files (including image) are exported from enex but cannot be imported in Anytype actually (see [here](https://github.com/anyproto/anytype-heart/issues/456)).
+
 
 **Points to consider :**
 Evernote exports are not clean (especially between Legacy and version 10): variations in the method for the same style, unnecessary divs, etc.
 
-## Done
-- [x] Creation of the basic JSON model -> Update : as a class
-- [x] Generation of ID for blocks
-- [x]  Insertion of elements from divs, as a type page, with full width
-- [x] **Block alignement** : Centered and Right
-- [x] **Titles** : H1 , H2, H3, Hx (if...)
-- [x] Horizontal Separator and empty line
-- [x] **Inline Text Formatting** : Handling duplicates; Italic, Bold, Underline, Strike
-- [x] **List** (with ul/ol) : Bullet, Numbered, Checklist (Checked and Unchecked)
-- [x] **Indented Text** via margin-left and in subList
-- [x] **Colors** EN to AT color mapping; color style and background-color style
-- [x] Emoji
 
-- [x] **Détails** Title intégration
 
-- [x] **Files** : Decoding files from EN, association with content, define mime/type/..., define embed or linked
-- [x]  **Code Block** : Integration, basic language detection
-
-- [X] **Usage** Treat enex folder
-
-## TODO
+## Progess
 - [ ] **Files** : Import file **-> Bug in AT, issue reported**
 - [ ] **Tag Management** AT testing using specific tags **-> Bug in AT, issue reported**
-
 - [ ] **List** case with `<en-todo checked="false" />`
 - [ ] **Détails** Creation date (format and integration)
 - [ ] **Usage** User parameter, Notebook management
-
-
-**Tables**
-Coming soon, need to check how it's work
+- [ ] **Tables** Coming soon, need to check how it's work
 
 
 
-### Other
-- **Code Block** Better language detection?
-- Task integration?
-- Embed integration of link -> Non-existent in AT currently
-- Adding more properties for file ? (OCR text?)
-
-
-### Options (for GUI)
-- Separator for nested tags?
-- tags Relation if existing (need the ID)
-- Import Notebook information as...
