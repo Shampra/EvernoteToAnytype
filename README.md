@@ -51,3 +51,9 @@ Coming soon, need to check how it's work
 - Task integration?
 - Embed integration of link -> Non-existent in AT currently
 - Adding more properties for file ? (OCR text?)
+
+
+### Options (for GUI)
+- Separator for nested tags?
+- tags Relation if existing (need the ID)
+- Import Notebook information as...
