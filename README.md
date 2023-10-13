@@ -1,15 +1,10 @@
-# EvernoteToAnytype - IN DEVELOPMENT!
+# EvernoteToAnytype
 Enex to JSON converter, for export Evernote note to Anytype
 
+**Please see it as a work in progress**
 
 
-### Environment
-```
-pip install beautifulsoup4
-pip install lxml
-pip install scipy
-```
-
+### Build
 For packaged version :
 ```
 pip install PyInstaller 
@@ -31,6 +26,7 @@ Particularly, files (including image) are exported from enex but cannot be impor
 
 **Points to consider :**
 Evernote exports are not clean (especially between Legacy and version 10): variations in the method for the same style, unnecessary divs, etc.
+Some cases may not be covered yet; you can report them to me.
 
 
 
@@ -42,5 +38,6 @@ Evernote exports are not clean (especially between Legacy and version 10): varia
 - [ ] **Usage** User parameter, Notebook management
 - [ ] **Tables** Coming soon, need to check how it's work
 
+[See more](./docs/history.md)
 
 
