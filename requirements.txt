@@ -3,5 +3,4 @@ scipy==1.11.2
 tk
 tkinterdnd2
 customtkinter
-pygments
 tktooltip

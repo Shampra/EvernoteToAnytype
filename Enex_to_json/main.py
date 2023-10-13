@@ -35,12 +35,12 @@ def print_files_to_gui(file_list):
     if num_files > 0:
         convert_button.configure(state=tk.NORMAL)
         # Affiche une tooltip avec la liste des fichiers
-        empty_label.configure(text=f"Number of ENEX files to convert: {len(file_list)}")
-        # ToolTip(empty_label, "\n".join(file_list))
+        info_label.configure(text=f"Number of ENEX files to convert: {len(file_list)}")
+        # ToolTip(info_label, "\n".join(file_list))
     else:
         convert_button.configure(state=tk.DISABLED)
-        empty_label.configure(text=f"No ENEX file to convert")
-        # ToolTip(empty_label, "Files must be enex only.")
+        info_label.configure(text=f"No ENEX file to convert")
+        # ToolTip(info_label, "Files must be enex only.")
 
 
 def browse_files():
@@ -59,10 +59,12 @@ def on_drop(event):
 
 def convert():
     options = {
-        'carnet': carnet_var.get(),
-        'tags': tags_var.get()
+        # 'carnet': carnet_var.get(),
+        # 'tags': tags_var.get()
     }
-    converter.convert_files(list_files_to_convert, options)
+    result = converter.convert_files(list_files_to_convert, options)
+    convert_button.configure(state=tk.DISABLED)
+    info_label.configure(text=f"{result} enex files converted")
 
 
 root = Tk()
@@ -75,20 +77,20 @@ root.grid_propagate(False)
 FrameOptions = tk.LabelFrame(root, text="Options")
 FrameOptions.grid(row=0, column=1, padx=10, pady=10, rowspan=5, sticky='nsew')
 
-carnet_var = ctk.BooleanVar()
-carnet_checkbox = ctk.CTkCheckBox(FrameOptions, text="Import Notebook information", variable=carnet_var)
-carnet_checkbox.grid(row=0, column=0, padx=10, pady=10, sticky='w')
+# carnet_var = ctk.BooleanVar()
+# carnet_checkbox = ctk.CTkCheckBox(FrameOptions, text="Import Notebook information", variable=carnet_var)
+# carnet_checkbox.grid(row=0, column=0, padx=10, pady=10, sticky='w')
 
-tags_var = ctk.BooleanVar()
-tags_checkbox = ctk.CTkCheckBox(FrameOptions, text="Option to come...", variable=tags_var)
-tags_checkbox.grid(row=1, column=0, padx=10, pady=10, sticky='w')
+# tags_var = ctk.BooleanVar()
+# tags_checkbox = ctk.CTkCheckBox(FrameOptions, text="Option to come...", variable=tags_var)
+# tags_checkbox.grid(row=1, column=0, padx=10, pady=10, sticky='w')
 
 start_text = ctk.CTkLabel(root, text="To start, select your ENEX files or folder.\nYou can drop them here too.")
 start_text.grid(row=0, column=0, padx=10, pady=10)
 
 # Laissez une autre ligne vide
-empty_label = ctk.CTkLabel(root, text="")
-empty_label.grid(row=1, column=0, padx=10, pady=10, rowspan=2)
+info_label = ctk.CTkLabel(root, text="")
+info_label.grid(row=1, column=0, padx=10, pady=10, rowspan=2)
 
 select_button = ctk.CTkButton(root, text="Select files or folder", command=browse_files)
 select_button.grid(row=3, column=0, padx=10, pady=10)

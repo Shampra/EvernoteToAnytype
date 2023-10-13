@@ -3,16 +3,16 @@ import json
 import random
 import xml.etree.ElementTree as ET
 from scipy.spatial import cKDTree
-import models.mime
 import hashlib
 import os
 import base64
 import json
 import re
+from datetime import datetime
+import time
 
 from models.language_patterns import language_patterns
-from pygments.lexers import guess_lexer
-
+import models.mime
 
 class PageModel:
     def __init__(self):
@@ -22,12 +22,6 @@ class PageModel:
                 "data": {
                     "blocks": [],
                     "details": {
-                        "createdDate": 1694278035,
-                        "creator": "bafyreidk3ty67vxnt2nl74w6vycmm4v5vu55zatfvnq7wpefbo2po6wsxu",
-                        "description": "",
-                        "lastModifiedBy": "bafyreidk3ty67vxnt2nl74w6vycmm4v5vu55zatfvnq7wpefbo2po6wsxu",
-                        "lastModifiedDate": 1695479472,
-                        "lastOpenedDate": 1695479438,
                         "layout": 0,
                         "name": "name",
                         "type": "ot-page"
@@ -471,13 +465,22 @@ def get_files(xml_content, dest_folder):
     return files_info_dict
 
 
-# TODO - vide
 def process_details_to_json(content, page_model: PageModel):
     """ Récupére le détail de la note """
     title = content.find("title").get_text()
     page_model.edit_details_key("name", title)
-    created_date = content.find("created")
-    print(title)
+    
+    # created date
+    created_date = content.find("created").get_text()
+    date_format = "%Y%m%dT%H%M%SZ"
+    date_object = datetime.strptime(created_date, date_format)
+    created_timestamp = int(date_object.timestamp())
+    page_model.edit_details_key("createdDate", created_timestamp)
+    
+    # Modified date as converted date
+    timestamp_converted = int(time.time())
+    page_model.edit_details_key("lastModifiedDate", timestamp_converted)
+
     pass
 
 
@@ -617,7 +620,7 @@ def process_div_children(div, page_model: PageModel, files_dict):
                 original_width = int(styles.get("--en-naturalWidth", "0"))
                 
                 relative_width = None  
-                if embed_width is not None and original_width is not None and original_width is not 0:
+                if embed_width is not None and original_width is not None and original_width != 0:
                     relative_width = int(embed_width.replace("px", "")) / original_width
                 # Format lien? 
                 style_attr = child.get('style')
@@ -691,26 +694,24 @@ def process_div_children(div, page_model: PageModel, files_dict):
 
 
 def convert_files(enex_files_list: list, options=None):
-    print("conversion")
-    print(enex_files_list)
     if not enex_files_list:
         print("Aucun fichier à convertir.")
         return
     
-    
     source_folder = os.path.dirname(enex_files_list[0])
     result_folder = os.path.join(source_folder, "Converted_files")
     os.makedirs(result_folder, exist_ok=True)
-    print(result_folder)
     files_dest_folder = os.path.join(result_folder, "files")
     
+    nb_files = 0
     for enex_file in enex_files_list:
+        print(f"Conversion de {os.path.basename(enex_file)}...")
         # Lire le contenu du fichier enex
         with open(enex_file, 'r', encoding='utf-8') as xhtml_file:
             xhtml_content = xhtml_file.read()
             #file_id = hashlib.md5(xhtml_content).hexdigest()
         
-        soup = BeautifulSoup(xhtml_content, 'html.parser')
+        soup = BeautifulSoup(xhtml_content, 'xml')
         
         # Traitement des fichiers (base64 vers fichiers)
         files_dict = get_files(xhtml_content, files_dest_folder)
@@ -732,10 +733,13 @@ def convert_files(enex_files_list: list, options=None):
 
         # Générer le nom du fichier JSON en supprimant l'extension .enex
         json_file_name = os.path.splitext(os.path.basename(enex_file))[0] + '.json'
-        print(os.path.join(result_folder, json_file_name))
         # Enregistrement dans un fichier JSON avec le nom du fichier enex
         with open(os.path.join(result_folder, json_file_name), 'w', encoding='utf-8') as file:
             json.dump(page_model.to_json(), file, indent=2)
+        nb_files += 1
+        
+    
+    return nb_files
             
 
 def main():

@@ -18,6 +18,7 @@ pyinstaller main.py --additional-hooks-dir=.
 
 
 ## Usage
+- Export your Evernote Notes (actually, this tools doesn't support notebook export)
 - Launch the gui with "main" file
 - drop your enex fils to convert (or a folder with them inside) or select them with the button
 - clic to Convert
