@@ -506,8 +506,6 @@ def process_codeblock(content, div_id, page_model: PageModel):
     for lang, patterns in language_patterns.items():
         occurrences = 0
         for pattern in patterns:
-            for result in re.findall(pattern, extracted_text):
-                print(f"--- {lang}: {result}")
             occurrences += len(re.findall(pattern, extracted_text))
         
         # Mise à jour de text_language si le nombre d'occurrences est plus élevé
@@ -520,7 +518,6 @@ def process_codeblock(content, div_id, page_model: PageModel):
     page_model.edit_text_key(div_id, "style", "Code")
     page_model.edit_block_key(div_id,"fields",text_language)
     
-    print(extracted_text)
     pass
 
 
@@ -610,7 +607,6 @@ def process_div_children(div, page_model: PageModel, files_dict):
         # Traitement des fichiers à intégrer
         elif child.name == 'en-media':
             hash = child.get('hash')
-            print(hash)
             if hash in files_dict:
                 sanitized_filename, mime, file_size, file_type = files_dict[hash]
                 # Redimensionné? Il faut retourner width="340px" divisé par style="--en-naturalWidth:1280"  style="--en-naturalWidth:1280; --en-naturalHeight:512;" width="340px" />
@@ -694,27 +690,29 @@ def process_div_children(div, page_model: PageModel, files_dict):
                 
 
 
-def main():
+def convert_files(enex_files_list: list, options=None):
+    print("conversion")
+    print(enex_files_list)
+    if not enex_files_list:
+        print("Aucun fichier à convertir.")
+        return
     
-    # Répertoire contenant les fichiers enex
-    enex_directory = 'Tests/'
     
-    # Liste des fichiers enex dans le répertoire
-    enex_files = [f for f in os.listdir(enex_directory) if f.endswith('code.enex')]
-
-    for enex_file in enex_files:
-        # Construire le chemin complet du fichier enex
-        enex_file_path = os.path.join(enex_directory, enex_file)
-        
+    source_folder = os.path.dirname(enex_files_list[0])
+    result_folder = os.path.join(source_folder, "Converted_files")
+    os.makedirs(result_folder, exist_ok=True)
+    print(result_folder)
+    files_dest_folder = os.path.join(result_folder, "files")
+    
+    for enex_file in enex_files_list:
         # Lire le contenu du fichier enex
-        with open(enex_file_path, 'r', encoding='utf-8') as xhtml_file:
+        with open(enex_file, 'r', encoding='utf-8') as xhtml_file:
             xhtml_content = xhtml_file.read()
             #file_id = hashlib.md5(xhtml_content).hexdigest()
         
         soup = BeautifulSoup(xhtml_content, 'html.parser')
         
         # Traitement des fichiers (base64 vers fichiers)
-        files_dest_folder = os.path.join(enex_directory, "files")
         files_dict = get_files(xhtml_content, files_dest_folder)
         
         # Utilisation de la classe PageModel pour créer le JSON
@@ -733,11 +731,22 @@ def main():
         page_model.cleanup()
 
         # Générer le nom du fichier JSON en supprimant l'extension .enex
-        json_file_name = os.path.splitext(enex_file)[0] + '.json'
-        
+        json_file_name = os.path.splitext(os.path.basename(enex_file))[0] + '.json'
+        print(os.path.join(result_folder, json_file_name))
         # Enregistrement dans un fichier JSON avec le nom du fichier enex
-        with open(os.path.join(enex_directory, 'Results', json_file_name), 'w', encoding='utf-8') as file:
+        with open(os.path.join(result_folder, json_file_name), 'w', encoding='utf-8') as file:
             json.dump(page_model.to_json(), file, indent=2)
+            
+
+def main():
+    # Répertoire contenant les fichiers enex de test
+    enex_directory = 'Tests/'
+    
+    # Liste des fichiers enex dans le répertoire
+    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('code.enex')]
+    convert_files(enex_files)
+
+    
 
 
 if __name__ == "__main__":
