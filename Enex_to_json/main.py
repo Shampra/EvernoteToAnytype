@@ -69,7 +69,7 @@ def convert():
 
 root = Tk()
 root.geometry("479x184+720+298")
-root.title("Get file path")
+root.title("EN to AT converter v0.6")
 
 # Désactiver le redimensionnement automatique
 root.grid_propagate(False)
