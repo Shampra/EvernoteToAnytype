@@ -393,7 +393,7 @@ def process_div_children(div, page_model: Model.Page, files_dict):
                 
                 relative_width = None  
                 if embed_width is not None and original_width is not None and original_width != 0:
-                    relative_width = int(embed_width.replace("px", "")) / original_width
+                    relative_width = float(embed_width.replace("px", "")) / original_width
                 # Format lien? 
                 style_attr = child.get('style')
                 format = 'link' if style_attr and '--en-viewAs:attachment;' in style_attr else None
