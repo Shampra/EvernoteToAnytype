@@ -13,239 +13,8 @@ import time
 
 from models.language_patterns import language_patterns
 import models.mime
-
-class PageModel:
-    def __init__(self):
-        self.page_json = {
-            "sbType": "Page",
-            "snapshot": {
-                "data": {
-                    "blocks": [],
-                    "details": {
-                        "layout": 0,
-                        "name": "name",
-                        "type": "ot-page"
-                    },
-                    "objectTypes": ["ot-page"]
-                }
-            }
-        }
-
-    def find_block_by_id(self, block_id):
-        """
-        Recherche un bloc par son ID.
-
-        Args:
-            block_id (str): ID du bloc à rechercher.
-
-        Returns:
-            dict or None: Le bloc trouvé ou None s'il n'est pas trouvé.
-        """
-        return next((b for b in self.page_json["snapshot"]["data"]["blocks"] if b["id"] == block_id), None)
-
-
-    def find_parent_id(self, shifting_left):
-        """
-        Trouve le bloc précédent avec une valeur de style margin-left inférieure.
-        
-        Args:
-            shifting_left (int): La valeur de shifting de l'élément actuel.
-        
-        Returns:
-            dict or None: Le bloc précédent s'il existe, sinon None.
-        """
-        for block in self.page_json["snapshot"]["data"]["blocks"][::-1]:
-            prev_shifting = block.get("shifting")
-            if shifting_left > prev_shifting:
-                return block["id"]
-        return None
-        
-        
-    def add_children_id(self, parent_id, div_id):
-        """
-        Ajoute l'id de la div dans la liste "childrenIds" du parent.
-        
-        Args:
-            parent_id (str): L'ID du block parent.
-            div_id (str): L'ID du block enfant
-        """
-        parent_block = self.find_block_by_id(parent_id)
-        if parent_block:
-            children_ids = parent_block.setdefault("childrenIds", [])
-            if div_id not in children_ids:
-                children_ids.append(div_id)
-        else:
-            print(f"Erreur, block {parent_id} inexistant lors de l'ajout d'enfant {div_id}")
-        
-
-    def add_block(self, block_id, shifting, width=None, align=None, text=None):
-        """Création d'un blocs avec gestion parent/enfant ou 1er bloc
-
-        Args:
-            block_id (_type_): id du block
-            shifting (_type_, optional): _description_. Defaults to None.
-            width (_type_, optional): _description_. Defaults to None.
-            align (_type_, optional): _description_. Defaults to None.
-            text (_type_, optional): _description_. Defaults to None.
-        """
-        
-        block = {
-            "id": block_id,
-        }
-        
-        # C'est le premier bloc, on l'init de façon spécifique
-        if not self.page_json["snapshot"]["data"]["blocks"]:
-            block["fields"] = {
-                "width": 1
-            }
-            block["shifting"] = -1
-        # pour les autres blocs, il faut trouver le parent et y ajouter l'enfant
-        else:
-            parent_id = self.find_parent_id(shifting)
-            if parent_id:
-                self.add_children_id(parent_id, block_id)
-            else:
-                print("erreur pas de parent")
-            
-        if shifting is not None:
-            block["shifting"] = shifting
-        if width is not None:
-            block["fields"] = {"width": width}
-        if align is not None:
-            block["align"] = align
-        if text is not None:
-            block["text"] = {"text": text, "marks": {}}
-        self.page_json["snapshot"]["data"]["blocks"].append(block)
-
-
-    def edit_details_key(self, key, value):
-        """Ajoute une clé ou modifie sa valeur dans les détails"""
-        self.page_json["snapshot"]["data"]["details"][key] = value
-        pass
-
-    def edit_block_key(self, block_id, key, value):
-        """Ajoute une clé ou modifie sa valeur dans le bloc ciblé
-
-        Args:
-            block_id (_type_): id du bloc à modifier
-            key (_type_): clé
-            value (_type_): valeur
-        """
-        block = self.find_block_by_id(block_id)
-        if block:
-            if key == "fields":
-                block["fields"] =  {"lang": value}
-            else:
-                block[key] = value
-                # Modification du shifting, on traite
-                # TODO : attention, si c'est modification il faudrait aussi retirer l'id de l'ancien parent!
-                if "shifting" in key:
-                    # Trouve l'id précédent 
-                    
-                    # Puis trouver le nouveau parent
-                    parent_id = self.find_parent_id(value)
-                    if parent_id:
-                        self.add_children_id(parent_id, block_id)
-                    else:
-                        print("erreur pas de parent")
-            return
-        
-        
-    def edit_text_key(self, block_id, key, value):
-        """Ajoute une clé ou modifie sa valeur dans la clé "text" du bloc ciblé
-
-        Args:
-            block_id (_type_): id du bloc à modifier
-            key (_type_): clé
-            value (_type_): valeur
-        """
-        block = self.find_block_by_id(block_id)
-        if block:
-            if "text"  in block:
-                block["text"][key] = value
-                return
-            else:
-                print("Clé text manquante, elle doit être créé avant de la modifier!")
-        else:
-            print(f"Erreur, block {block_id} inexistant lors de l'ajout de texte")
-
-
-    def add_text_to_block(self, block_id, text=None, block_style=None, div=None):
-        """Ajout d'une clé text au bon format
-
-        Args:
-            block_id (_type_): _description_
-            text (string, optional): _description_
-            block_style (string, optional): Style for text block : Checkbox, Marked, ...
-                For inline style, use add_mark_to_text! 
-        """
-        block = self.find_block_by_id(block_id)
-        if block:
-            # Si div en param, on ajouté (pour le cas hr)
-            if div is not None:
-                block["div"] = {}
-            else:
-                if "text" not in block:
-                    block["text"] = {} 
-                if text is not None:
-                    block["text"]["text"] = text
-                if "marks" not in block["text"]:
-                    block["text"]["marks"] = {}
-                if text is not None:
-                    block["text"]["text"] = text
-                if block_style is not None:
-                    block["text"]["marks"]["type"] = block_style
-        else:
-            print(f"Erreur, block {block_id} inexistant lors de l'ajout de texte")
-
-
-    def add_mark_to_text(self, block_id, start, end, mark_type = None, mark_param = None):
-        block = self.find_block_by_id(block_id)
-        if block and "text" in block:
-            if "marks" not in block["text"]["marks"]:
-                block["text"]["marks"] = {"marks": []}
-            mark = {"range": {"from": start, "to": end}}
-            if mark_type is not None:
-                mark["type"] = mark_type
-            if mark_param is not None:
-                mark["param"] = mark_param
-            block["text"]["marks"]["marks"].append(mark)
-        else:
-            print(f"Erreur, block {block_id} inexistant lors de l'ajout de mark")
-
-
-    def add_file_to_block(self, block_id, hash, name, file_type, mime, size, embed_size = None, format = None):
-        block = self.find_block_by_id(block_id)
-        if block:
-            block["file"] = {} 
-            block["file"]["hash"] = hash
-            block["file"]["name"] = name
-            block["file"]["type"] = file_type
-            block["file"]["mime"] = mime
-            # block["file"]["size"] = size
-            if embed_size is not None:
-                #TODO
-                pass
-            if format == "link":
-                block["file"]["style"] = "Link"
-            # Les images ont toujours un style défini
-            elif file_type == "Image":
-                block["file"]["style"] = "Embed"
-            block["file"]["state"] = "Done"
-            pass
-        else:
-            print(f"Erreur, block {block_id} inexistant lors de l'ajout de fichier")
-
-
-    def cleanup(self):
-        # Supprimer toutes les clés "shifting" de chaque bloc à la fin
-        for block in self.page_json["snapshot"]["data"]["blocks"]:
-            if "shifting" in block:
-                del block["shifting"]
-
-
-    def to_json(self):
-        return self.page_json
+import models.json_model as Model
+from models.options import Options
 
 
 def sanitize_filename(filename):
@@ -416,7 +185,7 @@ def extract_top_level_text(element):
     return ''.join(result)
 
 
-def get_files(xml_content, dest_folder):
+def get_files(xml_content: ET.Element, dest_folder):
     """_summary_
 
     Args:
@@ -428,8 +197,7 @@ def get_files(xml_content, dest_folder):
     """
     files_info_dict = {} 
 
-    root = ET.fromstring(xml_content)
-    for resource in root.findall('.//resource'):
+    for resource in xml_content.findall('.//resource'):
         # Récupérer les éléments de la ressource
         data_elem = resource.find("./data")
         mime_elem = resource.find("./mime")
@@ -465,17 +233,20 @@ def get_files(xml_content, dest_folder):
     return files_info_dict
 
 
-def process_details_to_json(content, page_model: PageModel):
+def process_details_to_json(content: ET.Element, page_model: Model.Page):
     """ Récupére le détail de la note """
-    title = content.find("title").get_text()
+    title_element = content.find("title")
+    title = title_element.text if title_element is not None else "Default Title"   
     page_model.edit_details_key("name", title)
     
     # created date
-    created_date = content.find("created").get_text()
-    date_format = "%Y%m%dT%H%M%SZ"
-    date_object = datetime.strptime(created_date, date_format)
-    created_timestamp = int(date_object.timestamp())
-    page_model.edit_details_key("createdDate", created_timestamp)
+    created_date_element = content.find("created")
+    if created_date_element is not None:
+        created_date = created_date_element.text
+        date_format = "%Y%m%dT%H%M%SZ"
+        date_object = datetime.strptime(created_date, date_format)
+        created_timestamp = int(date_object.timestamp())
+        page_model.edit_details_key("createdDate", created_timestamp)
     
     # Modified date as converted date
     timestamp_converted = int(time.time())
@@ -484,12 +255,12 @@ def process_details_to_json(content, page_model: PageModel):
     pass
 
 
-def process_codeblock(content, div_id, page_model: PageModel):
+def process_codeblock(content, div_id, page_model: Model.Page):
     """Process code block with all content including children div
     
     Args:
         content (_type_): _description_
-        page_model (PageModel): _description_
+        page_model (Model.Page): _description_
     """
     extracted_text = ""
     for div_child in content.find_all(['div', 'br']):
@@ -524,7 +295,7 @@ def process_codeblock(content, div_id, page_model: PageModel):
     pass
 
 
-def extract_text_with_formatting(div_content, div_id, page_model: PageModel):
+def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
     """
     Analyze the tags to transform the text formatting into AT JSON format. 
     """
@@ -574,10 +345,11 @@ def extract_text_with_formatting(div_content, div_id, page_model: PageModel):
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             
 
-def process_content_to_json(content, page_model, files_dict):
+def process_content_to_json(content: str, page_model, files_dict):
     """
     Processing <content> to create the parent element and calling a function for child elements
     """
+    # Converting to soup for specific html parsing
     soup = BeautifulSoup(content, 'html.parser')  # Utilisation de l'analyseur HTML par défaut
 
     # Créer l'élément JSON pour la première div (shifting = -1)
@@ -591,7 +363,7 @@ def process_content_to_json(content, page_model, files_dict):
     process_div_children(root_block, page_model, files_dict)
 
 
-def process_div_children(div, page_model: PageModel, files_dict):
+def process_div_children(div, page_model: Model.Page, files_dict):
     # Définition des balises block à traiter
     balisesBlock = ['div', 'hr', 'br', 'h1', 'h2', 'h3','en-media']
     children = div.find_all(balisesBlock)
@@ -693,7 +465,15 @@ def process_div_children(div, page_model: PageModel, files_dict):
                 
 
 
-def convert_files(enex_files_list: list, options=None):
+def convert_files(enex_files_list: list):
+    """Conert enex file from the list into json files
+
+    Args:
+        enex_files_list (list): list of enex file to convert
+
+    Returns:
+        string: number of notes converted
+    """
     if not enex_files_list:
         print("Aucun fichier à convertir.")
         return
@@ -703,43 +483,48 @@ def convert_files(enex_files_list: list, options=None):
     os.makedirs(result_folder, exist_ok=True)
     files_dest_folder = os.path.join(result_folder, "files")
     
-    nb_files = 0
+    nb_notes = 0
     for enex_file in enex_files_list:
         print(f"Conversion de {os.path.basename(enex_file)}...")
-        # Lire le contenu du fichier enex
         with open(enex_file, 'r', encoding='utf-8') as xhtml_file:
-            xhtml_content = xhtml_file.read()
+            file_content = xhtml_file.read()
             #file_id = hashlib.md5(xhtml_content).hexdigest()
         
-        soup = BeautifulSoup(xhtml_content, 'xml')
+        soup = BeautifulSoup(file_content, 'xml')
+        root = ET.fromstring(file_content)
         
-        # Traitement des fichiers (base64 vers fichiers)
-        files_dict = get_files(xhtml_content, files_dest_folder)
-        
-        # Utilisation de la classe PageModel pour créer le JSON
-        page_model: PageModel = PageModel()
+        # is unique or multiple note?
+        for note_xml in root.iter("note"):
+            # Traitement des fichiers (base64 vers fichiers)
+            files_dict = get_files(note_xml, files_dest_folder)
+            
+            # Utilisation de la classe Model.Page pour créer le JSON
+            page_model: Model.Page = Model.Page()
 
-        # Extraction du contenu de la balise <content> et traitement
-        content = soup.find('content').text
-        process_content_to_json(content, page_model, files_dict)
-        
-        
+            # Extraction du contenu de la balise <content> et traitement
+            content_element = note_xml.find('content')
+            content = content_element.text if content_element is not None else None
+            process_content_to_json(content, page_model, files_dict)
+            
+            # Processing xml tags (other than <content>)
+            process_details_to_json(note_xml,page_model)
 
-        # Traitement des balises du fichier (sauf <content>)
-        process_details_to_json(soup,page_model)
+            # Nettoyer les clés "shifting" si nécessaire
+            page_model.cleanup()
 
-        # Nettoyer les clés "shifting" si nécessaire
-        page_model.cleanup()
-
-        # Générer le nom du fichier JSON en supprimant l'extension .enex
-        json_file_name = os.path.splitext(os.path.basename(enex_file))[0] + '.json'
-        # Enregistrement dans un fichier JSON avec le nom du fichier enex
-        with open(os.path.join(result_folder, json_file_name), 'w', encoding='utf-8') as file:
-            json.dump(page_model.to_json(), file, indent=2)
-        nb_files += 1
+            # Générer le nom du fichier JSON en supprimant l'extension .enex
+            # json_file_name = os.path.splitext(os.path.basename(enex_file))[0] + '.json'
+            
+            
+            # Name for file : TODO, case of multiples notes with same name in Evernote... add an ID?
+            note_title = page_model.page_json["snapshot"]["data"]["details"]["name"]
+            filename = f"{sanitize_filename(note_title)}.json"
+            with open(os.path.join(result_folder, filename), 'w', encoding='utf-8') as file:
+                json.dump(page_model.to_json(), file, indent=2)
+            nb_notes += 1
         
     
-    return nb_files
+    return nb_notes
             
 
 def main():

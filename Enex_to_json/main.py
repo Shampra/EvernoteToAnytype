@@ -4,6 +4,7 @@ from tkinter import filedialog
 import customtkinter as ctk
 import converter  # Importez le module "traitement"
 import os
+from models.options import Options
 
 class Tk(ctk.CTk, TkinterDnD.DnDWrapper):
     def __init__(self, *args, **kwargs):
@@ -58,11 +59,10 @@ def on_drop(event):
 
 
 def convert():
-    options = {
-        # 'carnet': carnet_var.get(),
-        # 'tags': tags_var.get()
-    }
-    result = converter.convert_files(list_files_to_convert, options)
+    my_options = Options()
+    # my_options.tag = "Valeur pour le tag"
+    my_options.import_notebook_name = notebook_var.get()
+    result = converter.convert_files(list_files_to_convert)
     convert_button.configure(state=tk.DISABLED)
     info_label.configure(text=f"{result} enex files converted")
 
@@ -77,9 +77,9 @@ root.grid_propagate(False)
 FrameOptions = tk.LabelFrame(root, text="Options")
 FrameOptions.grid(row=0, column=1, padx=10, pady=10, rowspan=5, sticky='nsew')
 
-# carnet_var = ctk.BooleanVar()
-# carnet_checkbox = ctk.CTkCheckBox(FrameOptions, text="Import Notebook information", variable=carnet_var)
-# carnet_checkbox.grid(row=0, column=0, padx=10, pady=10, sticky='w')
+notebook_var = ctk.BooleanVar()
+notebook_checkbox = ctk.CTkCheckBox(FrameOptions, text="Import Notebook name", variable=notebook_var)
+notebook_checkbox.grid(row=0, column=0, padx=10, pady=10, sticky='w')
 
 # tags_var = ctk.BooleanVar()
 # tags_checkbox = ctk.CTkCheckBox(FrameOptions, text="Option to come...", variable=tags_var)
