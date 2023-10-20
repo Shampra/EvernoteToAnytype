@@ -314,7 +314,6 @@ def process_table(table_content, page_model: Model.Page):
     page_model.edit_block_key(rows_list_id, "style", "TableRows", master_key="layout")
     page_model.add_children_id(table_id,rows_list_id)
 
-
     # Variables pour stocker les IDs des colonnes et des lignes
     columns_ids = []
     rows_ids = []
@@ -332,11 +331,9 @@ def process_table(table_content, page_model: Model.Page):
             styles = extract_styles(col_style) if col_style else {}
             col_width_px = styles.get("width", None)
             col_width = int(col_width_px.replace("px", "")) if col_width_px else None
-
             # Crée un bloc pour chaque colonne
             page_model.add_block(col_id, shifting=None, width=col_width)
             page_model.edit_block_key(col_id,"tableColumn",{})
-
 
     # Récupération des lignes
     rows = table_content.find_all('tr')
@@ -345,7 +342,6 @@ def process_table(table_content, page_model: Model.Page):
     cells_for_future_row = []
     TEMP_nb_row = 0
     for row in rows:
-
         row_id = generate_random_id()
         rows_ids.append(row_id)
         # Ajout ligne dans la liste des lignes
@@ -368,7 +364,6 @@ def process_table(table_content, page_model: Model.Page):
             cells_for_future_row.clear()
 
         tds = row.find_all('td')
-        nb_cell = 0
         # Puis parcours des cellules de la ligne
         index_columns = 0
         for td in tds:
@@ -376,12 +371,9 @@ def process_table(table_content, page_model: Model.Page):
             cell_id = f"{row_id}-{col}"
             # Ajout de la cellule dans le bloc de la ligne
             page_model.add_children_id(row_id,cell_id)
-            
-            # Traitement du contenu de la cellule TD et création d'un bloc
-            # ... (à implémenter)
             page_model.add_block(cell_id, shifting=None, text="")
             
-            # Traitement cellule
+            # Traitement contenu de la cellule
             # TODO : voir pour mutualiser avec process_div_children()
             # Il faudrait aussi "mutualiser" les div ou autres : dans AT, il n'y a qu'un bloc
             # Impact sur la longueur du texte, sur ce que récupérer (style sur div, etc)
@@ -396,14 +388,12 @@ def process_table(table_content, page_model: Model.Page):
                     
             # Puis on supprime les notions de div et on traite l'ensemble 
             cleaned_td = td
-            print(cleaned_td)
             for tag in cleaned_td.find_all(['div', 'ol', 'ul', 'li']):
                 if tag.name == "li":
                     tag.insert_before('\n')
                 tag.unwrap()
             for br in td.find_all('br'):
                 br.replace_with('\n')
-            print(cleaned_td)
             extract_text_with_formatting(cleaned_td, cell_id, page_model)
             
             # récupération style sur td
@@ -418,17 +408,8 @@ def process_table(table_content, page_model: Model.Page):
             if 'background-color' in styles:
                 param = extract_color_from_style(styles["background-color"])
                 page_model.edit_block_key(cell_id,"backgroundColor",param)
-            
-            
-            
-            
-            
 
-
-            nb_cell=nb_cell+1
-            # print(f"Cellule {nb_cell} sur {len(columns_ids)} : {cell_id} -- texte : {text}")
-            
-            # Gère le colspan
+            # Gère les cellules fusionnées
             colspan = int(td.get('colspan', 1))
             if colspan > 1:
                 for _ in range(colspan - 1):
@@ -437,10 +418,7 @@ def process_table(table_content, page_model: Model.Page):
                     cell_id = f"{row_id}-{next_col}"
                     page_model.add_block(cell_id, shifting=None, text="")
                     page_model.add_children_id(row_id,cell_id)
-                    # On sautera la cellule suivante
-                    nb_cell=nb_cell+1
             
-            # et le rowspan
             rowspan = int(td.get('rowspan', 1))
             if rowspan > 1:
                 for _ in range(rowspan - 1):
@@ -449,10 +427,6 @@ def process_table(table_content, page_model: Model.Page):
             index_columns+=1
     
         TEMP_nb_row+= 1
-
-    # Continue le traitement de chaque cellule et bloc de la table
-    # ... (à implémenter)
-    pass
 
 
 def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
@@ -579,7 +553,8 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                 page_model.add_block(div_id, shifting=shifting_left)
                 page_model.add_file_to_block(div_id, hash = hash, name = sanitized_filename, file_type = file_type, mime = mime, size = file_size, embed_size = relative_width, format=format )
             
-                # TODO : quand AnyType permettra l'import des fichiers            
+                # TODO : quand AnyType permettra l'import des fichiers     
+                       
         # Traitement bloc code (div racine sans texte)
         elif child.name == 'div' and 'style' in child.attrs and '--en-codeblock:true' in child['style']:
                 process_codeblock(child, div_id, page_model)
@@ -598,7 +573,6 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                 parent_list = child.find_parent(['ol', 'ul'])
                 if parent_list:
                     #Est-ce dans une liste imbriquée? 1ère étape pouvoir pouvoir placer le childrenIds!
-                    #TODO
                     # TODO : ajout imbrication à l'imbrication existante? Si padding = 40 et imbrication 40 : traiter comme 80?
                     #        A tester quels cas EN peut générer...
                     nested_level = len(parent_list.find_parents(['ol', 'ul']))
