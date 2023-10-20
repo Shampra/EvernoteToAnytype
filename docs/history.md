@@ -13,23 +13,27 @@
 - [x] Emoji
 
 - [x] **Détails** Title intégration
+- [x] **Détails** Creation date (format and integration)
 
 - [x] **Files** : Decoding files from EN, association with content, define mime/type/..., define embed or linked
 - [x]  **Code Block** : Integration, basic language detection
 
+- [X] **Tables** Management of rowspan and colspan, cell content, td's style, ...
+
 - [X] **Usage** Treat enex folder
+- [X] **Usage** Treat enex containing multiple note
 
 ## TODO
 - [ ] **Files** : Import file **-> Bug in AT, issue reported**
 - [ ] **Tag Management** AT testing using specific tags **-> Bug in AT, issue reported**
 
+- [ ] **Tables** More case for validate  solution about line break (with list, multiples div, br,...)
 - [ ] **List** case with `<en-todo checked="false" />`
-- [ ] **Détails** Creation date (format and integration)
-- [ ] **Usage** User parameter, Notebook management
 
+- [ ] **Usage**  User parameter : keep the notebook name
+- [ ] **Usage**  Create a zip if multiple json
 
-**Tables**
-Coming soon, need to check how it's work
+- [ ] **Code**  Clean the code, versionning, debug file, error management, ... 
 
 
 
