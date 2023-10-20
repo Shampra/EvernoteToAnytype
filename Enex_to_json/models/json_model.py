@@ -43,7 +43,7 @@ class Page:
         """
         for block in self.page_json["snapshot"]["data"]["blocks"][::-1]:
             prev_shifting = block.get("shifting")
-            if shifting_left > prev_shifting:
+            if prev_shifting is not None and shifting_left is not None and shifting_left > prev_shifting:
                 return block["id"]
         return None
         
@@ -65,12 +65,12 @@ class Page:
             print(f"Erreur, block {parent_id} inexistant lors de l'ajout d'enfant {div_id}")
         
 
-    def add_block(self, block_id, shifting, width=None, align=None, text=None):
+    def add_block(self, block_id, shifting=None, width=None, align=None, text=None):
         """Création d'un blocs avec gestion parent/enfant ou 1er bloc
 
         Args:
             block_id (_type_): id du block
-            shifting (_type_, optional): _description_. Defaults to None.
+            shifting (_type_, optional): Value of shifting used to link parents/childrens. None if no parent/children needed (Default value).
             width (_type_, optional): _description_. Defaults to None.
             align (_type_, optional): _description_. Defaults to None.
             text (_type_, optional): _description_. Defaults to None.
@@ -86,8 +86,8 @@ class Page:
                 "width": 1
             }
             block["shifting"] = -1
-        # pour les autres blocs, il faut trouver le parent et y ajouter l'enfant
-        else:
+        # pour les autres blocs, il faut trouver le parent et y ajouter l'enfant (sauf si shifting=None, bloc géré différemment)
+        elif shifting is not None:
             parent_id = self.find_parent_id(shifting)
             if parent_id:
                 self.add_children_id(parent_id, block_id)
@@ -111,18 +111,19 @@ class Page:
         pass
 
 
-    def edit_block_key(self, block_id, key, value):
+    def edit_block_key(self, block_id, key, value, master_key=None):
         """Ajoute une clé ou modifie sa valeur dans le bloc ciblé
 
         Args:
             block_id (_type_): id du bloc à modifier
             key (_type_): clé
             value (_type_): valeur
+            master_key(string) : optionnal, used if key is under another key like fields
         """
         block = self.find_block_by_id(block_id)
         if block:
-            if key == "fields":
-                block["fields"] =  {"lang": value}
+            if master_key is not None:
+                block[master_key] =  {key: value}
             else:
                 block[key] = value
                 # Modification du shifting, on traite

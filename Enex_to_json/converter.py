@@ -140,7 +140,8 @@ def extract_color_from_style(style):
         "red": (254, 193, 208),
         "purple": (203, 202, 255),
         "blue": (176, 236, 244),
-        "lime": (183, 247, 209)
+        "lime": (183, 247, 209),
+        "black": (51,51,51) # couleur mise automatiquement dans certains cas sous EN (pas de black sur AT mais ça sera ignoré)
     }
 
     def rgb_to_tuple(rgb):
@@ -161,7 +162,9 @@ def extract_color_from_style(style):
         rgb_components = rgb_to_tuple(rgb_value)
         return closest_color(rgb_components)
     # Vérifier si le style est au format hexadécimal
-    elif style.startswith("#") and len(style) == 7:
+    elif style.startswith("#") and (len(style) == 7 or len(style) == 4):
+        if len(style) == 4:
+            style = "#" + style[1] * 2 + style[2] * 2 + style[3] * 2           
         hex_value = style.lstrip("#")
         rgb_components = tuple(int(hex_value[i:i+2], 16) for i in (0, 2, 4))
         return closest_color(rgb_components)
@@ -290,14 +293,175 @@ def process_codeblock(content, div_id, page_model: Model.Page):
     shifting_left = extract_shifting_left(content)
     page_model.add_block(div_id, shifting=shifting_left, text = extracted_text)
     page_model.edit_text_key(div_id, "style", "Code")
-    page_model.edit_block_key(div_id,"fields",text_language)
+    page_model.edit_block_key(div_id,"lang",text_language, master_key="fields")
     
     pass
 
 
+def process_table(table_content, page_model: Model.Page):
+    # Crée un ID pour la table, la liste des colonnes et la liste des lignes et créé les blocs
+    table_id = generate_random_id()
+    page_model.add_block(table_id, shifting=extract_shifting_left(table_content))
+    page_model.edit_block_key(table_id, "table", {})
+    
+    columns_list_id = generate_random_id()
+    page_model.add_block(columns_list_id)
+    page_model.edit_block_key(columns_list_id, "style", "TableColumns", master_key="layout")
+    page_model.add_children_id(table_id,columns_list_id)
+    
+    rows_list_id = generate_random_id()
+    page_model.add_block(rows_list_id)
+    page_model.edit_block_key(rows_list_id, "style", "TableRows", master_key="layout")
+    page_model.add_children_id(table_id,rows_list_id)
+
+
+    # Variables pour stocker les IDs des colonnes et des lignes
+    columns_ids = []
+    rows_ids = []
+
+    # Récupération des colonnes
+    colgroup = table_content.find('colgroup')
+    if colgroup:
+        cols = colgroup.find_all('col')
+        for col in cols:
+            col_id = generate_random_id()
+            columns_ids.append(col_id)
+            page_model.add_children_id(columns_list_id,col_id)
+            # Récupération largeur
+            col_style = col.get('style')
+            styles = extract_styles(col_style) if col_style else {}
+            col_width_px = styles.get("width", None)
+            col_width = int(col_width_px.replace("px", "")) if col_width_px else None
+
+            # Crée un bloc pour chaque colonne
+            page_model.add_block(col_id, shifting=None, width=col_width)
+            page_model.edit_block_key(col_id,"tableColumn",{})
+
+
+    # Récupération des lignes
+    rows = table_content.find_all('tr')
+    
+    # il faut gérer les rowspan, on va stocker temporairement à chaque ligne les "futures" valeurs de la ligne suivantes
+    cells_for_future_row = []
+    TEMP_nb_row = 0
+    for row in rows:
+
+        row_id = generate_random_id()
+        rows_ids.append(row_id)
+        # Ajout ligne dans la liste des lignes
+        page_model.add_children_id(rows_list_id, row_id)
+        # Création bloc ligne
+        page_model.add_block(row_id, shifting=None)
+        page_model.edit_block_key(row_id,"tableRow",{})
+        
+        # On doit traiter la liste des colonnes pour cette nouvelle ligne
+        columns_ids_todo = columns_ids.copy()
+        
+        # Si on a des cellules récupérés (rowspan), on les gère
+        if cells_for_future_row:
+            for id in cells_for_future_row:
+                cell_id = f"{row_id}-{id}"
+                page_model.add_block(cell_id, shifting=None, text="")
+                page_model.add_children_id(row_id,cell_id)
+                # puis on retire cette colonne de la liste des colonnes à traiter
+                columns_ids_todo.remove(id)
+            cells_for_future_row.clear()
+
+        tds = row.find_all('td')
+        nb_cell = 0
+        # Puis parcours des cellules de la ligne
+        index_columns = 0
+        for td in tds:
+            col = columns_ids_todo[index_columns]
+            cell_id = f"{row_id}-{col}"
+            # Ajout de la cellule dans le bloc de la ligne
+            page_model.add_children_id(row_id,cell_id)
+            
+            # Traitement du contenu de la cellule TD et création d'un bloc
+            # ... (à implémenter)
+            page_model.add_block(cell_id, shifting=None, text="")
+            
+            # Traitement cellule
+            # TODO : voir pour mutualiser avec process_div_children()
+            # Il faudrait aussi "mutualiser" les div ou autres : dans AT, il n'y a qu'un bloc
+            # Impact sur la longueur du texte, sur ce que récupérer (style sur div, etc)
+            # Pour l'instant, on récupère le style de la 1ère div
+            first_child = td.find('div')
+            style = extract_styles(first_child.get('style'))
+            if 'text-align' in style:
+                if style['text-align'] == 'center':
+                    page_model.edit_block_key(cell_id,"align","AlignCenter")
+                elif style['text-align'] == 'right':
+                    page_model.edit_block_key(cell_id,"align","AlignRight")
+                    
+            # Puis on supprime les notions de div et on traite l'ensemble 
+            cleaned_td = td
+            print(cleaned_td)
+            for tag in cleaned_td.find_all(['div', 'ol', 'ul', 'li']):
+                if tag.name == "li":
+                    tag.insert_before('\n')
+                tag.unwrap()
+            for br in td.find_all('br'):
+                br.replace_with('\n')
+            print(cleaned_td)
+            extract_text_with_formatting(cleaned_td, cell_id, page_model)
+            
+            # récupération style sur td
+            styles = extract_styles(td.get('style'))
+            
+            # Récup des infos
+            if "vertical-align" in styles and styles["vertical-align"] == "middle":
+                page_model.edit_block_key(cell_id,"verticalAlign","VerticalAlignMiddle")
+            if "color" in styles:
+                param = extract_color_from_style(styles["color"])
+                page_model.edit_text_key(cell_id,"color",param)
+            if 'background-color' in styles:
+                param = extract_color_from_style(styles["background-color"])
+                page_model.edit_block_key(cell_id,"backgroundColor",param)
+            
+            
+            
+            
+            
+
+
+            nb_cell=nb_cell+1
+            # print(f"Cellule {nb_cell} sur {len(columns_ids)} : {cell_id} -- texte : {text}")
+            
+            # Gère le colspan
+            colspan = int(td.get('colspan', 1))
+            if colspan > 1:
+                for _ in range(colspan - 1):
+                    index_columns+=1
+                    next_col = columns_ids_todo[index_columns]  # Avance dans les colonnes
+                    cell_id = f"{row_id}-{next_col}"
+                    page_model.add_block(cell_id, shifting=None, text="")
+                    page_model.add_children_id(row_id,cell_id)
+                    # On sautera la cellule suivante
+                    nb_cell=nb_cell+1
+            
+            # et le rowspan
+            rowspan = int(td.get('rowspan', 1))
+            if rowspan > 1:
+                for _ in range(rowspan - 1):
+                    cells_for_future_row.append(col)
+                    
+            index_columns+=1
+    
+        TEMP_nb_row+= 1
+
+    # Continue le traitement de chaque cellule et bloc de la table
+    # ... (à implémenter)
+    pass
+
+
 def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
-    """
-    Analyze the tags to transform the text formatting into AT JSON format. 
+    """Analyze the tags to transform the text formatting into AT JSON format. 
+
+    Args:
+        div_content (_type_): Contenu de la balise
+        div_id (_type_): id du bloc pour le json
+        page_model (Model.Page): modèle
     """
     # Définition des balises inline à traiter
     formatting_tags = ['span', 'b', 'u', 'i', 's', 'a','font']
@@ -305,7 +469,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
     
     if div_text:
         # Ajout du block text
-        #print(div_text)
+        # print(div_text)
         page_model.add_text_to_block(div_id, text=div_text)
         pass
         
@@ -363,12 +527,27 @@ def process_content_to_json(content: str, page_model, files_dict):
     process_div_children(root_block, page_model, files_dict)
 
 
-def process_div_children(div, page_model: Model.Page, files_dict):
+def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
+    """_summary_
+
+    Args:
+        div (_type_): _description_
+        page_model (Model.Page): _description_
+        files_dict (_type_): _description_
+        table (bool, optional): Indicate if it's a loop for a table or the default treatment. Defaults to False.
+    """
     # Définition des balises block à traiter
-    balisesBlock = ['div', 'hr', 'br', 'h1', 'h2', 'h3','en-media']
+    balisesBlock = ['div', 'hr', 'br', 'h1', 'h2', 'h3','en-media','table']
     children = div.find_all(balisesBlock)
     for child in children:
-        div_id = generate_random_id()
+        # élément d'une table, on passe car tous les éléments sont à traiter dans la table (div, media, ...)
+        if not cell_id and child.find_parent('td'):
+            continue;
+        # Traitement d'une cellule, l'ID est déjà défini
+        if cell_id:
+            div_id = cell_id
+        else:
+            div_id = generate_random_id()
         shifting_left = extract_shifting_left(child)
         div_text = extract_top_level_text(child)
         div_tag = child.get('id')
@@ -404,6 +583,9 @@ def process_div_children(div, page_model: Model.Page, files_dict):
         # Traitement bloc code (div racine sans texte)
         elif child.name == 'div' and 'style' in child.attrs and '--en-codeblock:true' in child['style']:
                 process_codeblock(child, div_id, page_model)
+        #Traitement table
+        elif child.name == 'table':
+            process_table(child, page_model)
         # Traitement des blocs demandant du contenu texte
         elif div_text:
             # les div enfant des blocs codes doivent être exclues du traitement global
@@ -461,9 +643,7 @@ def process_div_children(div, page_model: Model.Page, files_dict):
                 # et style des titres
                 if  child.name in ['h1', 'h2', 'h3']:
                     page_model.edit_text_key(div_id,"style","Header" + child.name[1:])
-            
-                
-
+                   
 
 def convert_files(enex_files_list: list):
     """Conert enex file from the list into json files
@@ -532,7 +712,7 @@ def main():
     enex_directory = 'Tests/'
     
     # Liste des fichiers enex dans le répertoire
-    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('code.enex')]
+    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('tableaux.enex')]
     convert_files(enex_files)
 
     
