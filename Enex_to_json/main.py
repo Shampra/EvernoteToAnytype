@@ -2,9 +2,12 @@ import tkinter as tk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 from tkinter import filedialog
 import customtkinter as ctk
-import converter  # Importez le module "traitement"
+import converter  # Import du module "traitement"
 import os
 from models.options import Options
+
+"""Version"""
+version="v0.8"
 
 class Tk(ctk.CTk, TkinterDnD.DnDWrapper):
     def __init__(self, *args, **kwargs):
@@ -69,7 +72,7 @@ def convert():
 
 root = Tk()
 root.geometry("479x184+720+298")
-root.title("EN to AT converter v0.6")
+root.title(f"EN to AT converter {version}")
 
 # Désactiver le redimensionnement automatique
 root.grid_propagate(False)
