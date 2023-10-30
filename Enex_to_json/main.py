@@ -73,7 +73,10 @@ def convert():
 root = Tk()
 root.geometry("479x184+720+298")
 root.title(f"EN to AT converter {version}")
-root.iconbitmap('image.ico')
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+icon_path = os.path.join(script_dir, "image.ico")
+root.iconbitmap(icon_path)
 
 # Désactiver le redimensionnement automatique
 root.grid_propagate(False)
