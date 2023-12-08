@@ -9,6 +9,7 @@ import base64
 import re
 from datetime import datetime
 import time
+import zipfile
 
 from models.language_patterns import language_patterns
 import models.mime
@@ -22,6 +23,14 @@ def sanitize_filename(filename):
         filename = filename.replace(char, '_')
     return filename
 
+
+def create_zip_archive(folder_path, zip_path):
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for foldername, subfolders, filenames in os.walk(folder_path):
+            for filename in filenames:
+                file_path = os.path.join(foldername, filename)
+                arcname = os.path.relpath(file_path, folder_path)
+                zip_file.write(file_path, arcname)
 
 def generate_random_id():
     """Génère un identifiant aléatoire en hexadécimal de la longueur spécifiée""" 
@@ -675,8 +684,11 @@ def convert_files(enex_files_list: list):
             with open(os.path.join(result_folder, filename), 'w', encoding='utf-8') as file:
                 json.dump(page_model.to_json(), file, indent=2)
             nb_notes += 1
-        
     
+    current_time = datetime.now()
+    zip_name = current_time.strftime("Converted_files-%d%m%Y%H%M%S.zip")
+    zip_path = os.path.join(source_folder, zip_name)
+    create_zip_archive(result_folder, zip_path)
     return nb_notes
             
 
