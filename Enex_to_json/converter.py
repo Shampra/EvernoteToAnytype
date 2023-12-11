@@ -216,7 +216,7 @@ def get_files(xml_content: ET.Element, dest_folder):
         mime_elem = resource.find("./mime")
         attributes_elem = resource.find("./resource-attributes")
 
-        if data_elem is not None and attributes_elem is not None and mime_elem is not None:
+        if data_elem is not None and data_elem.text is not None and attributes_elem is not None and mime_elem is not None and mime_elem.text is not None:
             # Récupérer les valeurs des éléments
             data_base64: str  = data_elem.text.strip()
             mime: str  = mime_elem.text.strip()
@@ -242,6 +242,9 @@ def get_files(xml_content: ET.Element, dest_folder):
             file_size = os.path.getsize(destination_path) * 8
 
             files_info_dict[hash_md5] = (sanitized_filename, mime, file_size, file_type)
+            
+        else:
+            print(f"Alert - Resource with empty element for one note")
 
     return files_info_dict
 
@@ -667,7 +670,11 @@ def convert_files(enex_files_list: list):
 
             # Extraction du contenu de la balise <content> et traitement
             content_element = note_xml.find('content')
-            content = content_element.text if content_element is not None else None
+            if content_element is None or content_element.text:
+                print(f"Note {nb_notes} has no content!")
+                continue
+            
+            content: str = content_element.text
             process_content_to_json(content, page_model, files_dict)
             
             # Processing xml tags (other than <content>)
