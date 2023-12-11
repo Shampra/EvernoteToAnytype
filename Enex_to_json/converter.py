@@ -34,11 +34,11 @@ def create_zip_archive(folder_path, zip_path):
                 arcname = os.path.relpath(file_path, folder_path)
                 zip_file.write(file_path, arcname)
 
-def generate_random_id(lenght = 24):
+def generate_random_id(length = 24):
     """Génère un identifiant aléatoire en hexadécimal de la longueur spécifiée""" 
     
     hex_chars = '0123456789abcdef'
-    id = ''.join(random.choice(hex_chars) for _ in range(lenght))
+    id = ''.join(random.choice(hex_chars) for _ in range(length))
     return id
 
 
