@@ -230,7 +230,13 @@ def get_files(xml_content: ET.Element, dest_folder):
 
             file_name: str = attributes_elem.find("./file-name").text.strip()
             sanitized_filename = sanitize_filename(file_name)
-            data_decode = base64.b64decode(data_base64)
+            try:
+                data_decode = base64.b64decode(data_base64)
+            except base64.binascii.Error as e:
+                # Gérer l'erreur ici, par exemple, imprimer un message ou définir data_decode sur une valeur par défaut
+                print(f"Erreur lors du décodage en base64 : {e}")
+                continue
+            
             # Calculer le hash (MD5) du contenu
             hash_md5 = hashlib.md5(data_decode).hexdigest()
 
@@ -670,7 +676,7 @@ def convert_files(enex_files_list: list):
 
             # Extraction du contenu de la balise <content> et traitement
             content_element = note_xml.find('content')
-            if content_element is None or content_element.text:
+            if content_element is None or content_element.text is None:
                 print(f"Note {nb_notes} has no content!")
                 continue
             
@@ -698,6 +704,7 @@ def convert_files(enex_files_list: list):
     zip_name = current_time.strftime("Converted_files-%d%m%Y%H%M%S.zip")
     zip_path = os.path.join(source_folder, zip_name)
     create_zip_archive(result_folder, zip_path)
+    print(f"Conversion completed: {nb_notes} notes converted")
     return nb_notes
             
 
