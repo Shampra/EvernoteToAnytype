@@ -1,3 +1,5 @@
+import argparse
+import shutil
 from bs4 import BeautifulSoup
 import json
 import random
@@ -10,7 +12,7 @@ import re
 from datetime import datetime
 import time
 import zipfile
-from typing import List
+from typing import List, Type
 
 
 from models.language_patterns import language_patterns
@@ -638,8 +640,8 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                     page_model.edit_text_key(div_id,"style","Header" + child.name[1:])
                    
 
-def convert_files(enex_files_list: list):
-    """Conert enex file from the list into json files
+def convert_files(enex_files_list: list, options: Type[Options]):
+    """Covnert enex file from the list into json files
 
     Args:
         enex_files_list (list): list of enex file to convert
@@ -652,9 +654,9 @@ def convert_files(enex_files_list: list):
         return
     
     source_folder = os.path.dirname(enex_files_list[0])
-    result_folder = os.path.join(source_folder, "Converted_files")
-    os.makedirs(result_folder, exist_ok=True)
-    files_dest_folder = os.path.join(result_folder, "files")
+    working_folder = os.path.join(source_folder, "Converted_files_work")
+    os.makedirs(working_folder, exist_ok=True)
+    files_dest_folder = os.path.join(working_folder, "files")
     
     nb_notes = 0
     for enex_file in enex_files_list:
@@ -696,14 +698,22 @@ def convert_files(enex_files_list: list):
             # Name for file : TODO, case of multiples notes with same name in Evernote... add an ID?
             note_title = page_model.page_json["snapshot"]["data"]["details"]["name"]
             filename = f"{sanitize_filename(note_title)}.json"
-            with open(os.path.join(result_folder, filename), 'w', encoding='utf-8') as file:
+            with open(os.path.join(working_folder, filename), 'w', encoding='utf-8') as file:
                 json.dump(page_model.to_json(), file, indent=2)
             nb_notes += 1
     
-    current_time = datetime.now()
-    zip_name = current_time.strftime("Converted_files-%d%m%Y%H%M%S.zip")
-    zip_path = os.path.join(source_folder, zip_name)
-    create_zip_archive(result_folder, zip_path)
+    # On zip le résultat
+    if options.zip_result:
+        current_time = datetime.now()
+        zip_name = current_time.strftime("ConvertedFiles_%d%m%Y_%H%M%S")
+        zip_path = os.path.join(source_folder, zip_name)
+        shutil.make_archive(zip_path, 'zip', working_folder)
+        shutil.rmtree(working_folder)
+    else:
+        result_folder = os.path.join(source_folder, "Converted_files")
+        shutil.move(working_folder, result_folder)
+        
+        
     print(f"Conversion completed: {nb_notes} notes converted")
     return nb_notes
             
@@ -711,10 +721,21 @@ def convert_files(enex_files_list: list):
 def main():
     # Répertoire contenant les fichiers enex de test
     enex_directory = 'Tests/'
+    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('tableaux.enex')]
+    
+    parser = argparse.ArgumentParser(description="Convert ENEX files.")
+    parser.add_argument("--enex_files", nargs="+", help="List of ENEX files to convert", default=enex_files)
+    parser.add_argument("--zip", action="store_true", default=False, help="Create a zip file")
+
+    args = parser.parse_args()
+    
+    my_options = Options()
+    # my_options.tag = "Valeur pour le tag"
+    # my_options.import_notebook_name = args.zip
+    my_options.zip_result = args.zip
     
     # Liste des fichiers enex dans le répertoire
-    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('tableaux.enex')]
-    convert_files(enex_files)
+    convert_files(enex_files, my_options)
 
     
 
