@@ -10,6 +10,8 @@ import re
 from datetime import datetime
 import time
 import zipfile
+from typing import List
+
 
 from models.language_patterns import language_patterns
 import models.mime
@@ -32,11 +34,11 @@ def create_zip_archive(folder_path, zip_path):
                 arcname = os.path.relpath(file_path, folder_path)
                 zip_file.write(file_path, arcname)
 
-def generate_random_id():
+def generate_random_id(lenght = 24):
     """Génère un identifiant aléatoire en hexadécimal de la longueur spécifiée""" 
     
     hex_chars = '0123456789abcdef'
-    id = ''.join(random.choice(hex_chars) for _ in range(24))
+    id = ''.join(random.choice(hex_chars) for _ in range(lenght))
     return id
 
 
@@ -214,11 +216,11 @@ def get_files(xml_content: ET.Element, dest_folder):
         mime_elem = resource.find("./mime")
         attributes_elem = resource.find("./resource-attributes")
 
-        if data_elem is not None and attributes_elem is not None:
+        if data_elem is not None and attributes_elem is not None and mime_elem is not None:
             # Récupérer les valeurs des éléments
-            data_base64 = data_elem.text.strip()
-            mime = mime_elem.text.strip()
-            file_type = ""
+            data_base64: str  = data_elem.text.strip()
+            mime: str  = mime_elem.text.strip()
+            file_type: str  = ""
             for type, mime_list in models.mime.TYPE.items():
                 if mime in mime_list:
                     file_type = type
@@ -226,7 +228,7 @@ def get_files(xml_content: ET.Element, dest_folder):
                 else:
                     file_type = "File"
 
-            file_name = attributes_elem.find("./file-name").text.strip()
+            file_name: str = attributes_elem.find("./file-name").text.strip()
             sanitized_filename = sanitize_filename(file_name)
             data_decode = base64.b64decode(data_base64)
             # Calculer le hash (MD5) du contenu
@@ -252,8 +254,8 @@ def process_details_to_json(content: ET.Element, page_model: Model.Page):
     
     # created date
     created_date_element = content.find("created")
-    if created_date_element is not None:
-        created_date = created_date_element.text
+    if created_date_element is not None and created_date_element.text is not None:
+        created_date : str = created_date_element.text
         date_format = "%Y%m%dT%H%M%SZ"
         date_object = datetime.strptime(created_date, date_format)
         created_timestamp = int(date_object.timestamp())
@@ -347,7 +349,7 @@ def process_table(table_content, page_model: Model.Page):
     rows = table_content.find_all('tr')
     
     # il faut gérer les rowspan, on va stocker temporairement à chaque ligne les "futures" valeurs de la ligne suivantes
-    cells_for_future_row = []
+    cells_for_future_row: List[str] = []
     TEMP_nb_row = 0
     for row in rows:
         row_id = generate_random_id()
