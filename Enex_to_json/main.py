@@ -20,7 +20,6 @@ list_files_to_convert = []
 def get_enex_files(input_path):
     global list_files_to_convert
     list_files_to_convert = []
-    print(input_path)
     for item in input_path:
         if os.path.exists(item) and os.path.isfile(item) and item.lower().endswith(".enex"):
             list_files_to_convert.append(os.path.abspath(item))

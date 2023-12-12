@@ -641,7 +641,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                    
 
 def convert_files(enex_files_list: list, options: Type[Options]):
-    """Covnert enex file from the list into json files
+    """Convert enex file from the list into json files
 
     Args:
         enex_files_list (list): list of enex file to convert
@@ -660,12 +660,11 @@ def convert_files(enex_files_list: list, options: Type[Options]):
     
     nb_notes = 0
     for enex_file in enex_files_list:
-        print(f"Conversion de {os.path.basename(enex_file)}...")
+        print(f"Converting {os.path.basename(enex_file)}...")
         with open(enex_file, 'r', encoding='utf-8') as xhtml_file:
             file_content = xhtml_file.read()
             #file_id = hashlib.md5(xhtml_content).hexdigest()
         
-        soup = BeautifulSoup(file_content, 'xml')
         root = ET.fromstring(file_content)
         
         # is unique or multiple note?
