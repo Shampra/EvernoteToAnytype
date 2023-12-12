@@ -650,7 +650,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
         string: number of notes converted
     """
     if not enex_files_list:
-        print("Aucun fichier à convertir.")
+        print("No file to convert.")
         return
     
     source_folder = os.path.dirname(enex_files_list[0])
@@ -669,6 +669,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
         
         # is unique or multiple note?
         for note_xml in root.iter("note"):
+            print(f"DEBUG -  Treatment note {nb_notes}")
             # Traitement des fichiers (base64 vers fichiers)
             files_dict = get_files(note_xml, files_dest_folder)
             
@@ -724,12 +725,14 @@ def main():
     parser = argparse.ArgumentParser(description="Convert ENEX files.")
     parser.add_argument("--enex_files", nargs="+", help="List of ENEX files to convert", default=enex_files)
     parser.add_argument("--zip", action="store_true", default=False, help="Create a zip file")
+    parser.add_argument("--debug", action="store_true", default=False, help="Create a debug file")
 
     args = parser.parse_args()
     
     my_options = Options()
     # my_options.tag = "Valeur pour le tag"
     # my_options.import_notebook_name = args.zip
+    my_options.is_debug = args.debug
     my_options.zip_result = args.zip
     
     # Liste des fichiers enex dans le répertoire

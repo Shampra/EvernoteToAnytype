@@ -66,6 +66,7 @@ def convert():
     # my_options.tag = "Valeur pour le tag"
     my_options.import_notebook_name = notebook_var.get()
     my_options.zip_result = zip_var.get()
+    my_options.is_debug = debug_var.get()
     result = converter.convert_files(list_files_to_convert,my_options)
     convert_button.configure(state=tk.DISABLED)
     info_label.configure(text=f"{result} enex files converted")
@@ -1293,9 +1294,14 @@ zip_var = ctk.BooleanVar()
 zip_checkbox = ctk.CTkCheckBox(FrameOptions, text="Create a zip file", variable=zip_var)
 zip_checkbox.grid(row=1, column=0, padx=5, pady=5, sticky='w')
 
+
 # tags_var = ctk.BooleanVar()
 # tags_checkbox = ctk.CTkCheckBox(FrameOptions, text="Keep same relation for tags", variable=tags_var)
 # tags_checkbox.grid(row=2, column=0, padx=5, pady=5, sticky='w')
+
+debug_var = ctk.BooleanVar()
+debug_checkbox = ctk.CTkCheckBox(FrameOptions, text="Create a debug file", variable=debug_var)
+debug_checkbox.grid(row=4, column=0, padx=5, pady=5, sticky='w')
 
 start_text = ctk.CTkLabel(root, text="To start, select your ENEX files or folder.\nYou can drop them here too.")
 start_text.grid(row=0, column=0, padx=5, pady=5)
