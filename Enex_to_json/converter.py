@@ -693,10 +693,9 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             # Générer le nom du fichier JSON en supprimant l'extension .enex
             # json_file_name = os.path.splitext(os.path.basename(enex_file))[0] + '.json'
             
-            
-            # Name for file : TODO, case of multiples notes with same name in Evernote... add an ID?
             note_title = page_model.page_json["snapshot"]["data"]["details"]["name"]
-            filename = f"{sanitize_filename(note_title)}.json"
+            # Filename with a random part, in case several notes have the same title
+            filename = f"{sanitize_filename(note_title)}_{generate_random_id(5)}.json"
             with open(os.path.join(working_folder, filename), 'w', encoding='utf-8') as file:
                 json.dump(page_model.to_json(), file, indent=2)
             nb_notes += 1
