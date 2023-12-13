@@ -13,13 +13,39 @@ from datetime import datetime
 import time
 import zipfile
 from typing import List, Type
+import logging
 
 
 from models.language_patterns import language_patterns
 import models.mime
 import models.json_model as Model
 from models.options import Options
+import warnings
 
+# Ignore les avertissements de BeautifulSoup
+warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
+
+# Déclarer options en tant que variable globale
+my_options = Options()
+
+
+# Configurer le logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)-8s - %(funcName)-2s l.%(lineno)d - %(message)s',
+    handlers=[
+        logging.FileHandler("debug.log")
+    ]
+)
+logger = logging.getLogger(__name__)
+
+def log_debug(message: str, level: int = logging.DEBUG):
+    if my_options.is_debug:
+        logger.log(level, message)
+    if level != logging.DEBUG:
+        print(message)
+    
+        
 
 def sanitize_filename(filename):
     invalid_chars = '/\\?%*:|"<>'
@@ -27,14 +53,6 @@ def sanitize_filename(filename):
         filename = filename.replace(char, '_')
     return filename
 
-
-def create_zip_archive(folder_path, zip_path):
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        for foldername, subfolders, filenames in os.walk(folder_path):
-            for filename in filenames:
-                file_path = os.path.join(foldername, filename)
-                arcname = os.path.relpath(file_path, folder_path)
-                zip_file.write(file_path, arcname)
 
 def generate_random_id(length = 24):
     """Génère un identifiant aléatoire en hexadécimal de la longueur spécifiée""" 
@@ -508,6 +526,7 @@ def process_content_to_json(content: str, page_model, files_dict):
     """
     Processing <content> to create the parent element and calling a function for child elements
     """
+    log_debug(f"-- Converting content...", logging.DEBUG)
     # Converting to soup for specific html parsing
     soup = BeautifulSoup(content, 'html.parser')  # Utilisation de l'analyseur HTML par défaut
 
@@ -531,6 +550,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
         files_dict (_type_): _description_
         table (bool, optional): Indicate if it's a loop for a table or the default treatment. Defaults to False.
     """
+    log_debug(f"-- Converting childrens...", logging.DEBUG)
     # Définition des balises block à traiter
     balisesBlock = ['div', 'hr', 'br', 'h1', 'h2', 'h3','en-media','table']
     children = div.find_all(balisesBlock)
@@ -638,7 +658,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                 # et style des titres
                 if  child.name in ['h1', 'h2', 'h3']:
                     page_model.edit_text_key(div_id,"style","Header" + child.name[1:])
-                   
+
 
 def convert_files(enex_files_list: list, options: Type[Options]):
     """Convert enex file from the list into json files
@@ -649,27 +669,38 @@ def convert_files(enex_files_list: list, options: Type[Options]):
     Returns:
         string: number of notes converted
     """
+    
     if not enex_files_list:
-        print("No file to convert.")
+        log_debug("No file to convert.", logging.INFO)
         return
     
     source_folder = os.path.dirname(enex_files_list[0])
-    working_folder = os.path.join(source_folder, "Converted_files_work")
+    if options.zip_result:
+        working_folder = os.path.join(source_folder, "Working_folder")
+    else:
+        working_folder = os.path.join(source_folder, "Converted_files")
     os.makedirs(working_folder, exist_ok=True)
     files_dest_folder = os.path.join(working_folder, "files")
     
     nb_notes = 0
     for enex_file in enex_files_list:
-        print(f"Converting {os.path.basename(enex_file)}...")
+        log_debug(f"Converting {os.path.basename(enex_file)}...", logging.INFO)
         with open(enex_file, 'r', encoding='utf-8') as xhtml_file:
             file_content = xhtml_file.read()
-            #file_id = hashlib.md5(xhtml_content).hexdigest()
+            if not file_content:
+                log_debug(f"No content in file", logging.ERROR)
+                return
         
-        root = ET.fromstring(file_content)
+        try:
+            root = ET.fromstring(file_content)
+        except ET.ParseError as e:
+            log_debug(f"XML parsing error : {e}", logging.ERROR)
+        except Exception as e:
+            log_debug(f"XML treatment error : {e}", logging.ERROR)
         
         # is unique or multiple note?
         for note_xml in root.iter("note"):
-            print(f"DEBUG -  Treatment note {nb_notes}")
+            log_debug(f"Treatment note {nb_notes}...", logging.INFO)
             # Traitement des fichiers (base64 vers fichiers)
             files_dict = get_files(note_xml, files_dest_folder)
             
@@ -679,7 +710,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             # Extraction du contenu de la balise <content> et traitement
             content_element = note_xml.find('content')
             if content_element is None or content_element.text is None:
-                print(f"Note {nb_notes} has no content!")
+                log_debug(f"Note {nb_notes} has no content!", logging.DEBUG)
                 continue
             
             content: str = content_element.text
@@ -701,19 +732,18 @@ def convert_files(enex_files_list: list, options: Type[Options]):
                 json.dump(page_model.to_json(), file, indent=2)
             nb_notes += 1
     
+    
     # On zip le résultat
     if options.zip_result:
+        log_debug(f"Create zip file", logging.DEBUG)
         current_time = datetime.now()
         zip_name = current_time.strftime("ConvertedFiles_%d%m%Y_%H%M%S")
         zip_path = os.path.join(source_folder, zip_name)
         shutil.make_archive(zip_path, 'zip', working_folder)
         shutil.rmtree(working_folder)
-    else:
-        result_folder = os.path.join(source_folder, "Converted_files")
-        shutil.move(working_folder, result_folder)
         
         
-    print(f"Conversion completed: {nb_notes} notes converted")
+    log_debug(f"Conversion completed: {nb_notes} notes converted", logging.INFO)
     return nb_notes
             
 
@@ -729,17 +759,16 @@ def main():
 
     args = parser.parse_args()
     
-    my_options = Options()
     # my_options.tag = "Valeur pour le tag"
     # my_options.import_notebook_name = args.zip
-    my_options.is_debug = args.debug
+    my_options.is_debug = True #args.debug
     my_options.zip_result = args.zip
     
+    log_debug(f"Launched with CLI", logging.DEBUG)
     # Liste des fichiers enex dans le répertoire
     convert_files(enex_files, my_options)
 
     
-
 
 if __name__ == "__main__":
     main()
