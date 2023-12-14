@@ -283,8 +283,8 @@ def get_files(xml_content: ET.Element, dest_folder):
 
 
 def process_details_to_json(content: ET.Element, page_model: Model.Page):
-    """ Récupére le détail de la note """
-    log_debug(f"- Get note details", logging.DEBUG)
+    """ Retrieves note details """
+    log_debug(f"- Retrieving note details", logging.DEBUG)
     title_element = content.find("title")
     title = title_element.text if title_element is not None else "Default Title"   
     page_model.edit_details_key("name", title)
@@ -302,7 +302,11 @@ def process_details_to_json(content: ET.Element, page_model: Model.Page):
     timestamp_converted = int(time.time())
     page_model.edit_details_key("lastModifiedDate", timestamp_converted)
 
-    pass
+    # tags
+    tags_list = content.findall("tag")
+    for element in tags_list:
+        log_debug(element.text,logging.NOTSET)
+        
 
 
 def process_codeblock(content, div_id, page_model: Model.Page):
@@ -695,6 +699,11 @@ def convert_files(enex_files_list: list, options: Type[Options]):
     os.makedirs(working_folder, exist_ok=True)
     files_dest_folder = os.path.join(working_folder, "files")
     
+    # Add Relation "Evernote tag"
+    dirname = os.path.dirname(__file__)
+    relation_file = os.path.join(dirname, "models/Evernote_Tag_Relation.json")
+    shutil.copy(relation_file,working_folder)
+    
     nb_notes = 0
     for enex_file in enex_files_list:
         log_debug(f"Converting {os.path.basename(enex_file)}...", logging.INFO)
@@ -763,7 +772,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
 def main():
     # Répertoire contenant les fichiers enex de test
     enex_directory = 'Tests/'
-    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('tableaux.enex')]
+    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('Test Tags.enex')]
     
     parser = argparse.ArgumentParser(description="Convert ENEX files.")
     parser.add_argument("--enex_files", nargs="+", help="List of ENEX files to convert", default=enex_files)

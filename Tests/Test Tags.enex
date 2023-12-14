@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE en-export SYSTEM "http://xml.evernote.com/pub/evernote-export4.dtd">
+<en-export export-date="20231214T150358Z" application="Evernote" version="10.67.4">
+  <note>
+    <title>Test Tags</title>
+    <created>20231214T150024Z</created>
+    <tag>test</tag>
+    <tag>Anytype</tag>
+    <tag>Démo</tag>
+    <note-attributes>
+    </note-attributes>
+    <content>
+      <![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note><div>Just for tags...</div><div>Must be : </div><ul><li><div>test</div></li><li><div>Anytype (under test)</div></li><li><div>Démo with accent</div></li></ul></en-note>      ]]>
+    </content>
+  </note>
+</en-export>
