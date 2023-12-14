@@ -8,7 +8,7 @@ from models.options import Options
 import base64
 
 """Version"""
-version="v0.8"
+version="v0.8.2"
 
 class Tk(ctk.CTk, TkinterDnD.DnDWrapper):
     def __init__(self, *args, **kwargs):
@@ -63,7 +63,7 @@ def on_drop(event):
 def convert():
     my_options = Options()
     # my_options.tag = "Valeur pour le tag"
-    my_options.import_notebook_name = notebook_var.get()
+    # my_options.import_notebook_name = notebook_var.get()
     my_options.zip_result = zip_var.get()
     my_options.is_debug = debug_var.get()
     result = converter.convert_files(list_files_to_convert,my_options)

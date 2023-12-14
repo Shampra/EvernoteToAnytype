@@ -17,8 +17,7 @@ import inspect
 
 
 from models.language_patterns import language_patterns
-import models.mime
-import models.json_model as Model
+import models.mime, models.json_model as Model
 from models.options import Options
 import warnings
 
