@@ -29,7 +29,6 @@ def get_enex_files(input_path):
                 if os.path.isfile(file_path) and file_path.lower().endswith(".enex"):
                     list_files_to_convert.append(os.path.abspath(file_path))
     # On affiche pour informer
-    print(list_files_to_convert)
     print_files_to_gui(list_files_to_convert)
 
 
@@ -1286,9 +1285,9 @@ root.grid_propagate(False)
 FrameOptions = tk.LabelFrame(root, text="Options")
 FrameOptions.grid(row=0, column=1, padx=10, pady=10, rowspan=5, sticky='nsew')
 
-notebook_var = ctk.BooleanVar()
-notebook_checkbox = ctk.CTkCheckBox(FrameOptions, text="Import Notebook name", variable=notebook_var)
-notebook_checkbox.grid(row=0, column=0, padx=5, pady=5, sticky='w')
+# notebook_var = ctk.BooleanVar()
+# notebook_checkbox = ctk.CTkCheckBox(FrameOptions, text="Import Notebook name", variable=notebook_var)
+# notebook_checkbox.grid(row=0, column=0, padx=5, pady=5, sticky='w')
 
 zip_var = ctk.BooleanVar()
 zip_checkbox = ctk.CTkCheckBox(FrameOptions, text="Create a zip file", variable=zip_var)

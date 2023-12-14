@@ -11,9 +11,9 @@ import base64
 import re
 from datetime import datetime
 import time
-import zipfile
 from typing import List, Type
 import logging
+import inspect
 
 
 from models.language_patterns import language_patterns
@@ -28,7 +28,6 @@ warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
 # Déclarer options en tant que variable globale
 my_options = Options()
 
-
 # Configurer le logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -39,10 +38,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 def log_debug(message: str, level: int = logging.DEBUG):
     if my_options.is_debug:
-        logger.log(level, message)
-    if level != logging.DEBUG:
+        if level >= logging.DEBUG:
+            caller_frame = inspect.stack()[1]
+            caller_func = caller_frame[3]
+            caller_lineno = caller_frame[2]
+            logger.log(level, f"{caller_func} l.{caller_lineno} - {message}")
+        elif 'TERM_PROGRAM' in os.environ.keys() and os.environ['TERM_PROGRAM'] == 'vscode': # debug en mode dev
+            print(message)
+            pass
+            # logger.log(level, message)
+    if level > logging.DEBUG:
         print(message)
     
         
@@ -109,7 +117,7 @@ def extract_tag_info(contenu_div, tags_list):
         start = len(soup_to_count.get_text())
         end = start + len(text)
 
-        #print(f"'tag_name': {tag.name}, 'text': {text}, 'start': {start}, 'end': {end}, 'tag position' : {tag.sourcepos}")
+        log_debug(f"--- 'tag_name': {tag.name}, 'text': {text}, 'start': {start}, 'end': {end}, 'tag position' : {tag.sourcepos}", logging.NOTSET)
         # Ajouter les informations de la balise à la liste
         tags_info.append({
             'tag_object': tag,
@@ -229,7 +237,8 @@ def get_files(xml_content: ET.Element, dest_folder):
         dic: dictionnaire avec 'hash du fichier': ('chemin du fichier', 'type mime du fichier') 
     """
     files_info_dict = {} 
-
+    log_debug(f"-- Get files...", logging.DEBUG)
+    
     for resource in xml_content.findall('.//resource'):
         # Récupérer les éléments de la ressource
         data_elem = resource.find("./data")
@@ -253,8 +262,7 @@ def get_files(xml_content: ET.Element, dest_folder):
             try:
                 data_decode = base64.b64decode(data_base64)
             except base64.binascii.Error as e:
-                # Gérer l'erreur ici, par exemple, imprimer un message ou définir data_decode sur une valeur par défaut
-                print(f"Erreur lors du décodage en base64 : {e}")
+                log_debug(f"--- Error during base64 decoding : {e}", logging.DEBUG)
                 continue
             
             # Calculer le hash (MD5) du contenu
@@ -270,13 +278,14 @@ def get_files(xml_content: ET.Element, dest_folder):
             files_info_dict[hash_md5] = (sanitized_filename, mime, file_size, file_type)
             
         else:
-            print(f"Alert - Resource with empty element for one note")
+            log_debug(f"--- Resource with empty element for one note", logging.DEBUG)
 
     return files_info_dict
 
 
 def process_details_to_json(content: ET.Element, page_model: Model.Page):
     """ Récupére le détail de la note """
+    log_debug(f"- Get note details", logging.DEBUG)
     title_element = content.find("title")
     title = title_element.text if title_element is not None else "Default Title"   
     page_model.edit_details_key("name", title)
@@ -482,7 +491,8 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
     
     if div_text:
         # Ajout du block text
-        # print(div_text)
+        log_debug(f"--- Extracting text", logging.DEBUG)
+        
         page_model.add_text_to_block(div_id, text=div_text)
         pass
         
@@ -526,19 +536,22 @@ def process_content_to_json(content: str, page_model, files_dict):
     """
     Processing <content> to create the parent element and calling a function for child elements
     """
-    log_debug(f"-- Converting content...", logging.DEBUG)
+    log_debug(f"- Converting content...", logging.DEBUG)
     # Converting to soup for specific html parsing
     soup = BeautifulSoup(content, 'html.parser')  # Utilisation de l'analyseur HTML par défaut
 
     # Créer l'élément JSON pour la première div (shifting = -1)
     root_block = soup.find('en-note')
-    block_id = generate_random_id()
-    page_model.add_block(block_id,-1)
-    first_text = root_block.find_all(string=True, recursive=False)
-    if first_text:
-        page_model.add_text_to_block(id,first_text[0].strip())
+    if root_block:
+        block_id = generate_random_id()
+        page_model.add_block(block_id,-1)
+        first_text = root_block.find_all(string=True, recursive=False)
+        if first_text:
+            page_model.add_text_to_block(id,first_text[0].strip())
 
-    process_div_children(root_block, page_model, files_dict)
+        process_div_children(root_block, page_model, files_dict)
+    else:
+        log_debug(f"'en-note' element not find", logging.ERROR)
 
 
 def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
@@ -550,7 +563,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
         files_dict (_type_): _description_
         table (bool, optional): Indicate if it's a loop for a table or the default treatment. Defaults to False.
     """
-    log_debug(f"-- Converting childrens...", logging.DEBUG)
+    log_debug(f"- Converting childrens...", logging.DEBUG)
     # Définition des balises block à traiter
     balisesBlock = ['div', 'hr', 'br', 'h1', 'h2', 'h3','en-media','table']
     children = div.find_all(balisesBlock)
@@ -670,6 +683,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
         string: number of notes converted
     """
     
+    log_debug(f"-----CONVERTING-----", logging.DEBUG)
     if not enex_files_list:
         log_debug("No file to convert.", logging.INFO)
         return
