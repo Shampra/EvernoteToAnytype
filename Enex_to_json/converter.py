@@ -282,7 +282,7 @@ def get_files(xml_content: ET.Element, dest_folder):
     return files_info_dict
 
 
-def process_details_to_json(content: ET.Element, page_model: Model.Page):
+def process_details_to_json(content: ET.Element, page_model: Model.Page, working_folder: str):
     """ Retrieves note details """
     log_debug(f"- Retrieving note details", logging.DEBUG)
     title_element = content.find("title")
@@ -305,8 +305,43 @@ def process_details_to_json(content: ET.Element, page_model: Model.Page):
     # tags
     tags_list = content.findall("tag")
     for element in tags_list:
-        log_debug(element.text,logging.NOTSET)
+        if element.text is not None:
+            log_debug(f"Ajout de l'item tag '{element.text}'",logging.NOTSET)
+            # On génère une clé, unique pour chaque tag pour éviter les doublons
+            try:
+                tag_key = (hashlib.md5(element.text.encode()).hexdigest())[:24]
+            except Exception as e:
+                log_debug(f"Error during tag processing : {e}", logging.ERROR)
+                continue
+            # On ne traite que si ce tag  n'est pas traité (donc fichier inexistant)
+            filename = f"tagItem_{sanitize_filename(tag_key)}.json"
+            filepath = os.path.join(working_folder, filename)
+            if not os.path.exists(filepath):
+                # On génère le modèle
+                tag_option: Model.Tag_Option = Model.Tag_Option()
+                # On renseigne key et uniqueKey ("opt-" + key)
+                tag_option.edit_name(element.text)
+                tag_option.edit_key(tag_key)
+                # On met une couleur défini suivant la clé (pour avoir des couleurs différentes mais fixe pour un même tag)
+                colors = {"grey", "yellow", "orange", "red", "pink", "purple", "blue", "ice", "teal", "lime"}
+                hex_value = int(tag_key, 16)
+                index = hex_value % len(colors)
+                selected_color = list(colors)[index]
+                tag_option.edit_color(selected_color)
+                # On génère le fichier à partir de Key (donc unique pour chaque chaine)
+                with open(filepath, 'w', encoding='utf-8') as file:
+                    json.dump(tag_option.to_json(), file, indent=2)
+            else:
+                log_debug(f"File '{filename} already exist'",logging.NOTSET)
+        else:
+            log_debug(f"Empty text for tag", logging.WARNING)
         
+
+
+
+
+
+
 
 
 def process_codeblock(content, div_id, page_model: Model.Page):
@@ -739,7 +774,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             process_content_to_json(content, page_model, files_dict)
             
             # Processing xml tags (other than <content>)
-            process_details_to_json(note_xml,page_model)
+            process_details_to_json(note_xml,page_model, working_folder)
 
             # Nettoyer les clés "shifting" si nécessaire
             page_model.cleanup()

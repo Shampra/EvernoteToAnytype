@@ -2,89 +2,27 @@
   "sbType": "STRelation",
   "snapshot": {
    "data": {
-    "blocks": [
-     {
-      "id": "bafyreifi4qthwnyxg2resyxm6sxxdute75okhiwfxm354bj23zdjkgfrhe",
-      "restrictions": {
- 
-      },
-      "childrenIds": [
-       "header"
-      ],
-      "smartblock": {
- 
-      }
-     },
-     {
-      "id": "header",
-      "restrictions": {
-       "edit": true,
-       "remove": true,
-       "drag": true,
-       "dropOn": true
-      },
-      "childrenIds": [
-       "title",
-       "featuredRelations"
-      ],
-      "layout": {
-       "style": "Header"
-      }
-     },
-     {
-      "id": "title",
-      "fields": {
-        "_detailsKey": [
-           "name",
-           "done"
-          ]
-       },
-      "restrictions": {
-       "remove": true,
-       "drag": true,
-       "dropOn": true
-      },
-      "text": {
-       "style": "Title",
-       "marks": {
- 
-       }
-      }
-     },
-     {
-      "id": "featuredRelations",
-      "restrictions": {
-       "remove": true,
-       "drag": true,
-       "dropOn": true
-      },
-      "featuredRelations": {
- 
-      }
-     }
-    ],
     "details": {
-
       "featuredRelations": [
          "type"
         ],
-      "id": "bafyreifi4qthwnyxg2resyxm6sxxdute75okhiwfxm354bj23zdjkgfrhe",
       "internalFlags": [
         ],
       "layout": 5,
       "name": "Evernote tag",
+      "relationKey": "202312evernotetags",
       "relationFormat": 11,
       "relationFormatObjectTypes": [
         ],
       "restrictions": [
         ],
       "snippet": "",
-      "uniqueKey": "rel-202312evernotetag"
+      "uniqueKey": "rel-202312evernotetags"
      },
     "objectTypes": [
      "ot-relation"
     ],
-    "key": "202312evernotetag"
+    "key": "202312evernotetags"
    }
   }
  }

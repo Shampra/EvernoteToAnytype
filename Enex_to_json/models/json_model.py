@@ -2,6 +2,7 @@
 class Page:
     """JSON model for a "Page" object in Anytype
     """
+
     def __init__(self):
         self.page_json = {
             "sbType": "Page",
@@ -30,14 +31,13 @@ class Page:
         """
         return next((b for b in self.page_json["snapshot"]["data"]["blocks"] if b["id"] == block_id), None)
 
-
     def find_parent_id(self, shifting_left):
         """
         Trouve le bloc précédent avec une valeur de style margin-left inférieure.
-        
+
         Args:
             shifting_left (int): La valeur de shifting de l'élément actuel.
-        
+
         Returns:
             dict or None: Le bloc précédent s'il existe, sinon None.
         """
@@ -46,12 +46,11 @@ class Page:
             if prev_shifting is not None and shifting_left is not None and shifting_left > prev_shifting:
                 return block["id"]
         return None
-        
-        
+
     def add_children_id(self, parent_id, div_id):
         """
         Ajoute l'id de la div dans la liste "childrenIds" du parent.
-        
+
         Args:
             parent_id (str): L'ID du block parent.
             div_id (str): L'ID du block enfant
@@ -62,8 +61,8 @@ class Page:
             if div_id not in children_ids:
                 children_ids.append(div_id)
         else:
-            print(f"Erreur, block {parent_id} inexistant lors de l'ajout d'enfant {div_id}")
-        
+            print(
+                f"Erreur, block {parent_id} inexistant lors de l'ajout d'enfant {div_id}")
 
     def add_block(self, block_id, shifting=None, width=None, align=None, text=None):
         """Création d'un blocs avec gestion parent/enfant ou 1er bloc
@@ -75,11 +74,11 @@ class Page:
             align (_type_, optional): _description_. Defaults to None.
             text (_type_, optional): _description_. Defaults to None.
         """
-        
+
         block = {
             "id": block_id,
         }
-        
+
         # C'est le premier bloc, on l'init de façon spécifique
         if not self.page_json["snapshot"]["data"]["blocks"]:
             block["fields"] = {
@@ -93,7 +92,7 @@ class Page:
                 self.add_children_id(parent_id, block_id)
             else:
                 print("erreur pas de parent")
-            
+
         if shifting is not None:
             block["shifting"] = shifting
         if width is not None:
@@ -104,12 +103,10 @@ class Page:
             block["text"] = {"text": text, "marks": {}}
         self.page_json["snapshot"]["data"]["blocks"].append(block)
 
-
     def edit_details_key(self, key, value):
         """Ajoute une clé ou modifie sa valeur dans les détails"""
         self.page_json["snapshot"]["data"]["details"][key] = value
         pass
-
 
     def edit_block_key(self, block_id, key, value, master_key=None):
         """Ajoute une clé ou modifie sa valeur dans le bloc ciblé
@@ -123,14 +120,14 @@ class Page:
         block = self.find_block_by_id(block_id)
         if block:
             if master_key is not None:
-                block[master_key] =  {key: value}
+                block[master_key] = {key: value}
             else:
                 block[key] = value
                 # Modification du shifting, on traite
                 # TODO : attention, si c'est modification il faudrait aussi retirer l'id de l'ancien parent!
                 if "shifting" in key:
-                    # Trouve l'id précédent 
-                    
+                    # Trouve l'id précédent
+
                     # Puis trouver le nouveau parent
                     parent_id = self.find_parent_id(value)
                     if parent_id:
@@ -138,8 +135,7 @@ class Page:
                     else:
                         print("erreur pas de parent")
             return
-        
-        
+
     def edit_text_key(self, block_id, key, value):
         """Ajoute une clé ou modifie sa valeur dans la clé "text" du bloc ciblé
 
@@ -150,14 +146,14 @@ class Page:
         """
         block = self.find_block_by_id(block_id)
         if block:
-            if "text"  in block:
+            if "text" in block:
                 block["text"][key] = value
                 return
             else:
                 print("Clé text manquante, elle doit être créé avant de la modifier!")
         else:
-            print(f"Erreur, block {block_id} inexistant lors de l'ajout de texte")
-
+            print(
+                f"Erreur, block {block_id} inexistant lors de l'ajout de texte")
 
     def add_text_to_block(self, block_id, text=None, block_style=None, div=None):
         """Ajout d'une clé text au bon format
@@ -175,7 +171,7 @@ class Page:
                 block["div"] = {}
             else:
                 if "text" not in block:
-                    block["text"] = {} 
+                    block["text"] = {}
                 if text is not None:
                     block["text"]["text"] = text
                 if "marks" not in block["text"]:
@@ -185,10 +181,10 @@ class Page:
                 if block_style is not None:
                     block["text"]["marks"]["type"] = block_style
         else:
-            print(f"Erreur, block {block_id} inexistant lors de l'ajout de texte")
+            print(
+                f"Erreur, block {block_id} inexistant lors de l'ajout de texte")
 
-
-    def add_mark_to_text(self, block_id, start, end, mark_type = None, mark_param = None):
+    def add_mark_to_text(self, block_id, start, end, mark_type=None, mark_param=None):
         block = self.find_block_by_id(block_id)
         if block and "text" in block:
             if "marks" not in block["text"]["marks"]:
@@ -200,20 +196,20 @@ class Page:
                 mark["param"] = mark_param
             block["text"]["marks"]["marks"].append(mark)
         else:
-            print(f"Erreur, block {block_id} inexistant lors de l'ajout de mark")
+            print(
+                f"Erreur, block {block_id} inexistant lors de l'ajout de mark")
 
-
-    def add_file_to_block(self, block_id, hash, name, file_type, mime, size, embed_size = None, format = None):
+    def add_file_to_block(self, block_id, hash, name, file_type, mime, size, embed_size=None, format=None):
         block = self.find_block_by_id(block_id)
         if block:
-            block["file"] = {} 
+            block["file"] = {}
             block["file"]["hash"] = hash
             block["file"]["name"] = name
             block["file"]["type"] = file_type
             block["file"]["mime"] = mime
             # block["file"]["size"] = size
             if embed_size is not None:
-                #TODO
+                # TODO
                 pass
             if format == "link":
                 block["file"]["style"] = "Link"
@@ -223,8 +219,8 @@ class Page:
             block["file"]["state"] = "Done"
             pass
         else:
-            print(f"Erreur, block {block_id} inexistant lors de l'ajout de fichier")
-
+            print(
+                f"Erreur, block {block_id} inexistant lors de l'ajout de fichier")
 
     def cleanup(self):
         # Supprimer toutes les clés "shifting" de chaque bloc à la fin
@@ -232,6 +228,48 @@ class Page:
             if "shifting" in block:
                 del block["shifting"]
 
+    def to_json(self):
+        return self.page_json
 
+
+class Tag_Option:
+    """JSON model for a "tag option" object in Anytype"""
+
+    def __init__(self):
+        self.page_json = {
+            "sbType": "STRelationOption",
+            "snapshot": {
+                "data": {
+                    "details": {
+                        "layout": 13,
+                        "name": "DEFAULT",
+                        "relationKey": "202312evernotetags",
+                        "relationOptionColor": "grey",
+                        "uniqueKey": ""
+                    },
+                    "objectTypes": [
+                        "ot-relationOption"
+                    ],
+                    "key": ""
+                }
+            }
+        }
+
+    def edit_name(self, value):
+        """Ajoute une clé ou modifie sa valeur dans les détails"""
+        self.page_json["snapshot"]["data"]["details"]["name"] = value
+        pass
+    
+    def edit_key(self, value):
+        """Ajoute ou modifie la valeur pour key et uniqueKey"""
+        self.page_json["snapshot"]["data"]["key"] = value
+        self.page_json["snapshot"]["data"]["details"]["uniqueKey"] = "opt-" + value
+        pass
+    
+    def edit_color(self, value):
+        """Ajoute ou modifie la valeur de la couleur"""
+        self.page_json["snapshot"]["data"]["details"]["relationOptionColor"] = value
+        pass
+    
     def to_json(self):
         return self.page_json
