@@ -68,7 +68,7 @@ def convert():
     my_options.is_debug = debug_var.get()
     result = converter.convert_files(list_files_to_convert,my_options)
     convert_button.configure(state=tk.DISABLED)
-    info_label.configure(text=f"{result} enex files converted")
+    info_label.configure(text=f"{result} note(s) converted")
 
 
 
