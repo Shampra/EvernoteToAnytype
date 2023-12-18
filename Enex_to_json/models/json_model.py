@@ -10,11 +10,20 @@ class Page:
                 "data": {
                     "blocks": [],
                     "details": {
+                        "featuredRelations": [
+                            "202312evernotetags"
+                        ],
                         "layout": 0,
                         "name": "Default name",
                         "type": "ot-page"
                     },
-                    "objectTypes": ["ot-page"]
+                    "objectTypes": ["ot-page"],
+                    "relationLinks": [
+                        {
+                        "key": "202312evernotetags",
+                        "format": "tag"
+                        }
+                    ]
                 }
             }
         }
@@ -46,6 +55,14 @@ class Page:
             if prev_shifting is not None and shifting_left is not None and shifting_left > prev_shifting:
                 return block["id"]
         return None
+
+    def get_creation_date(self):
+        creation_date = self.page_json["snapshot"]["data"]["details"]["createdDate"]
+        if creation_date is not None:
+            return creation_date
+        else:
+            return "0"
+        pass
 
     def add_children_id(self, parent_id, div_id):
         """
@@ -258,6 +275,11 @@ class Tag_Option:
     def edit_name(self, value):
         """Ajoute une clé ou modifie sa valeur dans les détails"""
         self.page_json["snapshot"]["data"]["details"]["name"] = value
+        pass
+    
+    def edit_id(self, value):
+        """Ajoute ou modifie l'id"""
+        self.page_json["snapshot"]["data"]["details"]["id"] = value
         pass
     
     def edit_key(self, value):

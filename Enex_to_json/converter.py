@@ -14,6 +14,7 @@ import time
 from typing import List, Type
 import logging
 import inspect
+import cssutils
 
 
 from models.language_patterns import language_patterns
@@ -75,8 +76,14 @@ def extract_shifting_left(div):
     if style:
         style_properties = style.split(';')
         for prop in style_properties:
-            if 'margin-left' in prop or 'padding-left' in prop :
-                return int(prop.split(':')[1].replace('px', '').strip())
+            if 'margin-left' in prop or 'padding-left' in prop:
+                value_str = prop.split(':')[1].strip()
+                if 'em' in value_str:
+                    return int(cssutils.css.CSSValue(value_str).value * 16)
+                elif 'px' in value_str:
+                    return int(value_str.replace('px', '').strip())
+                else:
+                    return 16
     return 0
 
 
@@ -256,7 +263,11 @@ def get_files(xml_content: ET.Element, dest_folder):
                 else:
                     file_type = "File"
 
-            file_name: str = attributes_elem.find("./file-name").text.strip()
+            elt_file_name = attributes_elem.find("./file-name")
+            if elt_file_name is not None and elt_file_name.text is not None:
+                file_name: str = attributes_elem.find("./file-name").text.strip()
+            else:
+                file_name = "noname_" + data_base64[:6]
             sanitized_filename = sanitize_filename(file_name)
             try:
                 data_decode = base64.b64decode(data_base64)
@@ -287,6 +298,7 @@ def process_details_to_json(content: ET.Element, page_model: Model.Page, working
     log_debug(f"- Retrieving note details", logging.DEBUG)
     title_element = content.find("title")
     title = title_element.text if title_element is not None else "Default Title"   
+    log_debug(f"- Note title : {title}", logging.NOTSET)
     page_model.edit_details_key("name", title)
     
     # created date
@@ -304,12 +316,14 @@ def process_details_to_json(content: ET.Element, page_model: Model.Page, working
 
     # tags
     tags_list = content.findall("tag")
+    tags_id_lists=[]
     for element in tags_list:
         if element.text is not None:
             log_debug(f"Ajout de l'item tag '{element.text}'",logging.NOTSET)
             # On génère une clé, unique pour chaque tag pour éviter les doublons
             try:
                 tag_key = (hashlib.md5(element.text.encode()).hexdigest())[:24]
+                tag_id = "id_"+tag_key
             except Exception as e:
                 log_debug(f"Error during tag processing : {e}", logging.ERROR)
                 continue
@@ -319,9 +333,10 @@ def process_details_to_json(content: ET.Element, page_model: Model.Page, working
             if not os.path.exists(filepath):
                 # On génère le modèle
                 tag_option: Model.Tag_Option = Model.Tag_Option()
-                # On renseigne key et uniqueKey ("opt-" + key)
+                # On renseigne key et uniqueKey ("opt-" + key), et l'id
                 tag_option.edit_name(element.text)
                 tag_option.edit_key(tag_key)
+                tag_option.edit_id(tag_id)
                 # On met une couleur défini suivant la clé (pour avoir des couleurs différentes mais fixe pour un même tag)
                 colors = {"grey", "yellow", "orange", "red", "pink", "purple", "blue", "ice", "teal", "lime"}
                 hex_value = int(tag_key, 16)
@@ -333,15 +348,12 @@ def process_details_to_json(content: ET.Element, page_model: Model.Page, working
                     json.dump(tag_option.to_json(), file, indent=2)
             else:
                 log_debug(f"File '{filename} already exist'",logging.NOTSET)
+            # Ajout au json de la note
+            tags_id_lists.append(tag_id)
         else:
             log_debug(f"Empty text for tag", logging.WARNING)
-        
-
-
-
-
-
-
+    if tags_id_lists:
+        page_model.edit_details_key("202312evernotetags",tags_id_lists)
 
 
 def process_codeblock(content, div_id, page_model: Model.Page):
@@ -404,115 +416,119 @@ def process_table(table_content, page_model: Model.Page):
     columns_ids = []
     rows_ids = []
 
-    # Récupération des colonnes
-    colgroup = table_content.find('colgroup')
-    if colgroup:
-        cols = colgroup.find_all('col')
-        for col in cols:
-            col_id = generate_random_id()
-            columns_ids.append(col_id)
-            page_model.add_children_id(columns_list_id,col_id)
-            # Récupération largeur
-            col_style = col.get('style')
-            styles = extract_styles(col_style) if col_style else {}
-            col_width_px = styles.get("width", None)
-            col_width = int(col_width_px.replace("px", "")) if col_width_px else None
-            # Crée un bloc pour chaque colonne
-            page_model.add_block(col_id, shifting=None, width=col_width)
-            page_model.edit_block_key(col_id,"tableColumn",{})
+    try:
+        # Récupération des colonnes
+        colgroup = table_content.find('colgroup')
+        if colgroup:
+            cols = colgroup.find_all('col')
+            for col in cols:
+                col_id = generate_random_id()
+                columns_ids.append(col_id)
+                page_model.add_children_id(columns_list_id,col_id)
+                # Récupération largeur
+                col_style = col.get('style')
+                styles = extract_styles(col_style) if col_style else {}
+                col_width_px = styles.get("width", None)
+                col_width = int(col_width_px.replace("px", "")) if col_width_px else None
+                # Crée un bloc pour chaque colonne
+                page_model.add_block(col_id, shifting=None, width=col_width)
+                page_model.edit_block_key(col_id,"tableColumn",{})
 
-    # Récupération des lignes
-    rows = table_content.find_all('tr')
-    
-    # il faut gérer les rowspan, on va stocker temporairement à chaque ligne les "futures" valeurs de la ligne suivantes
-    cells_for_future_row: List[str] = []
-    TEMP_nb_row = 0
-    for row in rows:
-        row_id = generate_random_id()
-        rows_ids.append(row_id)
-        # Ajout ligne dans la liste des lignes
-        page_model.add_children_id(rows_list_id, row_id)
-        # Création bloc ligne
-        page_model.add_block(row_id, shifting=None)
-        page_model.edit_block_key(row_id,"tableRow",{})
+        # Récupération des lignes
+        rows = table_content.find_all('tr')
         
-        # On doit traiter la liste des colonnes pour cette nouvelle ligne
-        columns_ids_todo = columns_ids.copy()
-        
-        # Si on a des cellules récupérés (rowspan), on les gère
-        if cells_for_future_row:
-            for id in cells_for_future_row:
-                cell_id = f"{row_id}-{id}"
-                page_model.add_block(cell_id, shifting=None, text="")
-                page_model.add_children_id(row_id,cell_id)
-                # puis on retire cette colonne de la liste des colonnes à traiter
-                columns_ids_todo.remove(id)
-            cells_for_future_row.clear()
-
-        tds = row.find_all('td')
-        # Puis parcours des cellules de la ligne
-        index_columns = 0
-        for td in tds:
-            col = columns_ids_todo[index_columns]
-            cell_id = f"{row_id}-{col}"
-            # Ajout de la cellule dans le bloc de la ligne
-            page_model.add_children_id(row_id,cell_id)
-            page_model.add_block(cell_id, shifting=None, text="")
+        # il faut gérer les rowspan, on va stocker temporairement à chaque ligne les "futures" valeurs de la ligne suivantes
+        cells_for_future_row: List[str] = []
+        TEMP_nb_row = 0
+        for row in rows:
+            row_id = generate_random_id()
+            rows_ids.append(row_id)
+            # Ajout ligne dans la liste des lignes
+            page_model.add_children_id(rows_list_id, row_id)
+            # Création bloc ligne
+            page_model.add_block(row_id, shifting=None)
+            page_model.edit_block_key(row_id,"tableRow",{})
             
-            # Traitement contenu de la cellule
-            # TODO : voir pour mutualiser avec process_div_children()
-            # Il faudrait aussi "mutualiser" les div ou autres : dans AT, il n'y a qu'un bloc
-            # Impact sur la longueur du texte, sur ce que récupérer (style sur div, etc)
-            # Pour l'instant, on récupère le style de la 1ère div
-            first_child = td.find('div')
-            style = extract_styles(first_child.get('style'))
-            if 'text-align' in style:
-                if style['text-align'] == 'center':
-                    page_model.edit_block_key(cell_id,"align","AlignCenter")
-                elif style['text-align'] == 'right':
-                    page_model.edit_block_key(cell_id,"align","AlignRight")
-                    
-            # Puis on supprime les notions de div et on traite l'ensemble 
-            cleaned_td = td
-            for tag in cleaned_td.find_all(['div', 'ol', 'ul', 'li']):
-                if tag.name == "li":
-                    tag.insert_before('\n')
-                tag.unwrap()
-            for br in td.find_all('br'):
-                br.replace_with('\n')
-            extract_text_with_formatting(cleaned_td, cell_id, page_model)
+            # On doit traiter la liste des colonnes pour cette nouvelle ligne
+            columns_ids_todo = columns_ids.copy()
             
-            # récupération style sur td
-            styles = extract_styles(td.get('style'))
-            
-            # Récup des infos
-            if "vertical-align" in styles and styles["vertical-align"] == "middle":
-                page_model.edit_block_key(cell_id,"verticalAlign","VerticalAlignMiddle")
-            if "color" in styles:
-                param = extract_color_from_style(styles["color"])
-                page_model.edit_text_key(cell_id,"color",param)
-            if 'background-color' in styles:
-                param = extract_color_from_style(styles["background-color"])
-                page_model.edit_block_key(cell_id,"backgroundColor",param)
-
-            # Gère les cellules fusionnées
-            colspan = int(td.get('colspan', 1))
-            if colspan > 1:
-                for _ in range(colspan - 1):
-                    index_columns+=1
-                    next_col = columns_ids_todo[index_columns]  # Avance dans les colonnes
-                    cell_id = f"{row_id}-{next_col}"
+            # Si on a des cellules récupérés (rowspan), on les gère
+            if cells_for_future_row:
+                for id in cells_for_future_row:
+                    cell_id = f"{row_id}-{id}"
                     page_model.add_block(cell_id, shifting=None, text="")
                     page_model.add_children_id(row_id,cell_id)
-            
-            rowspan = int(td.get('rowspan', 1))
-            if rowspan > 1:
-                for _ in range(rowspan - 1):
-                    cells_for_future_row.append(col)
-                    
-            index_columns+=1
-    
-        TEMP_nb_row+= 1
+                    # puis on retire cette colonne de la liste des colonnes à traiter
+                    columns_ids_todo.remove(id)
+                cells_for_future_row.clear()
+
+            tds = row.find_all('td')
+            # Puis parcours des cellules de la ligne
+            index_columns = 0
+            for td in tds:
+                col = columns_ids_todo[index_columns]
+                cell_id = f"{row_id}-{col}"
+                # Ajout de la cellule dans le bloc de la ligne
+                page_model.add_children_id(row_id,cell_id)
+                page_model.add_block(cell_id, shifting=None, text="")
+                
+                # Traitement contenu de la cellule
+                # TODO : voir pour mutualiser avec process_div_children()
+                # Il faudrait aussi "mutualiser" les div ou autres : dans AT, il n'y a qu'un bloc
+                # Impact sur la longueur du texte, sur ce que récupérer (style sur div, etc)
+                # Pour l'instant, on récupère le style de la 1ère div
+                first_child = td.find('div')
+                style = extract_styles(first_child.get('style'))
+                if 'text-align' in style:
+                    if style['text-align'] == 'center':
+                        page_model.edit_block_key(cell_id,"align","AlignCenter")
+                    elif style['text-align'] == 'right':
+                        page_model.edit_block_key(cell_id,"align","AlignRight")
+                        
+                # Puis on supprime les notions de div et on traite l'ensemble 
+                cleaned_td = td
+                for tag in cleaned_td.find_all(['div', 'ol', 'ul', 'li']):
+                    if tag.name == "li":
+                        tag.insert_before('\n')
+                    tag.unwrap()
+                for br in td.find_all('br'):
+                    br.replace_with('\n')
+                extract_text_with_formatting(cleaned_td, cell_id, page_model)
+                
+                # récupération style sur td
+                styles = extract_styles(td.get('style'))
+                
+                # Récup des infos
+                if "vertical-align" in styles and styles["vertical-align"] == "middle":
+                    page_model.edit_block_key(cell_id,"verticalAlign","VerticalAlignMiddle")
+                if "color" in styles:
+                    param = extract_color_from_style(styles["color"])
+                    page_model.edit_text_key(cell_id,"color",param)
+                if 'background-color' in styles:
+                    param = extract_color_from_style(styles["background-color"])
+                    page_model.edit_block_key(cell_id,"backgroundColor",param)
+
+                # Gère les cellules fusionnées
+                colspan = int(td.get('colspan', 1))
+                if colspan > 1:
+                    for _ in range(colspan - 1):
+                        index_columns+=1
+                        next_col = columns_ids_todo[index_columns]  # Avance dans les colonnes
+                        cell_id = f"{row_id}-{next_col}"
+                        page_model.add_block(cell_id, shifting=None, text="")
+                        page_model.add_children_id(row_id,cell_id)
+                
+                rowspan = int(td.get('rowspan', 1))
+                if rowspan > 1:
+                    for _ in range(rowspan - 1):
+                        cells_for_future_row.append(col)
+                        
+                index_columns+=1
+        
+            TEMP_nb_row+= 1
+    except:
+          log_debug('This table contains multiples rowspan/colspan that is not supported in this version.', logging.ERROR)
+          # TODO : cas des rowspans multiples...
 
 
 def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
@@ -694,7 +710,6 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
 
                 # Et style si c'est une liste
                 if parent_list:
-                    checked = False 
                     if parent_list.name == 'ol':
                         style_liste = 'Numbered'
                     elif parent_list.name == 'ul' and parent_list.has_attr('style') and '--en-todo:true' in parent_list['style']:
@@ -774,7 +789,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             process_content_to_json(content, page_model, files_dict)
             
             # Processing xml tags (other than <content>)
-            process_details_to_json(note_xml,page_model, working_folder)
+            process_details_to_json(note_xml, page_model, working_folder)
 
             # Nettoyer les clés "shifting" si nécessaire
             page_model.cleanup()
@@ -783,12 +798,12 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             # json_file_name = os.path.splitext(os.path.basename(enex_file))[0] + '.json'
             
             note_title = page_model.page_json["snapshot"]["data"]["details"]["name"]
-            # Filename with a random part, in case several notes have the same title
-            filename = f"{sanitize_filename(note_title)}_{generate_random_id(5)}.json"
+            # Filename with the create date, in case several notes have the same title
+            creation_date: str = page_model.get_creation_date()
+            filename = f"{sanitize_filename(note_title)}_{creation_date}.json"
             with open(os.path.join(working_folder, filename), 'w', encoding='utf-8') as file:
                 json.dump(page_model.to_json(), file, indent=2)
             nb_notes += 1
-    
     
     # On zip le résultat
     if options.zip_result:
@@ -798,8 +813,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
         zip_path = os.path.join(source_folder, zip_name)
         shutil.make_archive(zip_path, 'zip', working_folder)
         shutil.rmtree(working_folder)
-        
-        
+
     log_debug(f"Conversion completed: {nb_notes} notes converted", logging.INFO)
     return nb_notes
             
@@ -807,7 +821,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
 def main():
     # Répertoire contenant les fichiers enex de test
     enex_directory = 'Tests/'
-    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('Test Tags.enex')]
+    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('Bug_shifting_lef.enex')]
     
     parser = argparse.ArgumentParser(description="Convert ENEX files.")
     parser.add_argument("--enex_files", nargs="+", help="List of ENEX files to convert", default=enex_files)

@@ -6,17 +6,12 @@
       "featuredRelations": [
          "type"
         ],
-      "internalFlags": [
-        ],
       "layout": 5,
       "name": "Evernote tag",
-      "relationKey": "202312evernotetags",
       "relationFormat": 11,
-      "relationFormatObjectTypes": [
+      "relationFormatObjectTypes": [  
         ],
-      "restrictions": [
-        ],
-      "snippet": "",
+      "relationKey": "202312evernotetags",
       "uniqueKey": "rel-202312evernotetags"
      },
     "objectTypes": [
