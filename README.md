@@ -13,12 +13,12 @@ pyinstaller main.py --additional-hooks-dir=.
 
 
 ## Usage
-- Export your Evernote Notes (actually, this tools doesn't support notebook export)
+- Export your Evernote Notes (notes or a full notebook)
 - Launch the gui with "main" file
-- drop your enex fils to convert (or a folder with them inside) or select them with the button
+- drop your enex file to convert (or a folder with them inside) or select them with the button
 - clic to Convert
 
-A _Converted_files_  is created in the folder of your enex files, containing the converted files. Import them into Anytype.
+A _Converted_files zip  is created in the folder of your enex files, containing the converted files. Import them into Anytype.
 
 **Warning**
 It's under progress. 
@@ -32,16 +32,16 @@ Some cases may not be covered yet; you can report them to me.
 
 
 ## Progess
-**Last update : v0.7** 
-- [x]Import enex with multiples notes
-- [x]Import Creation date
-- [x]Import table (with all what Anytype Table can support)
+**Last update : v0.8.3** 
+- [ ] **Tag Management** : Create a "Evernote tag" relation, add all your tag, keep them in each note
+- [ ] **Reliability and log** 
 
 **Todo**
 - [ ] **Files** : Import file **-> Bug in AT, issue reported**
-- [ ] **Tag Management** AT testing using specific tags **-> Bug in AT, issue reported**
 - [ ] **List** case with `<en-todo checked="false" />`
-- [ ] **Usage** User parameter, Notebook management, zip when convert multiples notes
+- [ ] **Bug** Table with multiples merged cells (which Anytype doesn't support); it's work if only 1 roswpan / colspan
+- [ ] **Bug** Color conversion... AT has limited choice and sometimes "grey" in EN become "green" in AT
+- [ ] **Notebook management** Evernote doesn't export notebook name... To be reviewed if the creation of a notebook during conversion is requested...
 
 [See more](./docs/history.md)
 
