@@ -825,8 +825,9 @@ def main():
     
     parser = argparse.ArgumentParser(description="Convert ENEX files.")
     parser.add_argument("--enex_files", nargs="+", help="List of ENEX files to convert", default=enex_files)
-    parser.add_argument("--zip", action="store_true", default=False, help="Create a zip file")
+    parser.add_argument("--zip", action="store_true", default=True, help="Create a zip file")
     parser.add_argument("--debug", action="store_true", default=False, help="Create a debug file")
+    
 
     args = parser.parse_args()
     
