@@ -1289,7 +1289,7 @@ FrameOptions.grid(row=0, column=1, padx=10, pady=10, rowspan=5, sticky='nsew')
 # notebook_checkbox = ctk.CTkCheckBox(FrameOptions, text="Import Notebook name", variable=notebook_var)
 # notebook_checkbox.grid(row=0, column=0, padx=5, pady=5, sticky='w')
 
-zip_var = ctk.BooleanVar()
+zip_var = ctk.BooleanVar(value=True)
 zip_checkbox = ctk.CTkCheckBox(FrameOptions, text="Create a zip file", variable=zip_var)
 zip_checkbox.grid(row=1, column=0, padx=5, pady=5, sticky='w')
 
