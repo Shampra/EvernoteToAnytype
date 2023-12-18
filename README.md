@@ -39,6 +39,7 @@ Some cases may not be covered yet; you can report them to me.
 **Todo**
 - [ ] **Files** : Import file **-> Bug in AT, issue reported**
 - [ ] **List** case with `<en-todo checked="false" />`
+- [ ] **Tâche Evernote** Transform to text with checkbox?
 - [ ] **Bug** Table with multiples merged cells (which Anytype doesn't support); it's work if only 1 roswpan / colspan
 - [ ] **Bug** Color conversion... AT has limited choice and sometimes "grey" in EN become "green" in AT
 - [ ] **Notebook management** Evernote doesn't export notebook name... To be reviewed if the creation of a notebook during conversion is requested...

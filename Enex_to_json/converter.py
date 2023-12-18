@@ -363,6 +363,7 @@ def process_codeblock(content, div_id, page_model: Model.Page):
         content (_type_): _description_
         page_model (Model.Page): _description_
     """
+    log_debug("Processing code block", logging.NOTSET)
     extracted_text = ""
     for div_child in content.find_all(['div', 'br']):
         if div_child.name == 'br':  # Vérifie si le contenu de la div enfant est vide.
@@ -387,7 +388,7 @@ def process_codeblock(content, div_id, page_model: Model.Page):
         if occurrences > max_occurrences:
             max_occurrences = occurrences
             text_language = lang
-  
+            
     shifting_left = extract_shifting_left(content)
     page_model.add_block(div_id, shifting=shifting_left, text = extracted_text)
     page_model.edit_text_key(div_id, "style", "Code")
@@ -820,8 +821,8 @@ def convert_files(enex_files_list: list, options: Type[Options]):
 
 def main():
     # Répertoire contenant les fichiers enex de test
-    enex_directory = 'Tests/'
-    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('Bug_shifting_lef.enex')]
+    enex_directory = 'Tests/Temp/'
+    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('Carnet export test 2.enex')]
     
     parser = argparse.ArgumentParser(description="Convert ENEX files.")
     parser.add_argument("--enex_files", nargs="+", help="List of ENEX files to convert", default=enex_files)
@@ -833,8 +834,12 @@ def main():
     
     # my_options.tag = "Valeur pour le tag"
     # my_options.import_notebook_name = args.zip
-    my_options.is_debug = True #args.debug
+    my_options.is_debug = args.debug #args.debug
     my_options.zip_result = args.zip
+    if args.enex_files: # dev mode
+        enex_files = args.enex_files
+        my_options.is_debug = True
+        my_options.zip_result = False
     
     log_debug(f"Launched with CLI", logging.DEBUG)
     # Liste des fichiers enex dans le répertoire
