@@ -820,26 +820,57 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             
 
 def main():
-    # Répertoire contenant les fichiers enex de test
-    enex_directory = 'Tests/Temp/'
-    enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('Carnet export test 2.enex')]
+    enex_files =[]
     
     parser = argparse.ArgumentParser(description="Convert ENEX files.")
-    parser.add_argument("--enex_files", nargs="+", help="List of ENEX files to convert", default=enex_files)
+    parser.add_argument("--enex_sources", nargs="+", help="List of ENEX files to convert")
     parser.add_argument("--zip", action="store_true", default=True, help="Create a zip file")
     parser.add_argument("--debug", action="store_true", default=False, help="Create a debug file")
     
 
     args = parser.parse_args()
     
+    # S'il y a l'argument enex_sources défini, on parcours les éléments
+        # Si un élément est un dossier, on liste les fichiers *.enex de ce dossier et on les ajoute à enex_files
+        # Si c'est un fichier, 
+            # on vérifie que le fichier est en *.enex sinon message d'erreur (sans interrompre le programme)
+            # on vérifie qu'il existe sinon message d'erreur (sans interrompre le programme)
+            # Si tout est ok on l'ajoute à enex_files (en gardant le chemin complet bien sûr)
+    # S'il n'y a pas l'argument enex_sources défini, rien à faire car enex_files est déjà rempli par défaut
+    if args.enex_sources:
+        for source in args.enex_sources:
+            if os.path.isdir(source):
+                if os.path.exists(source):
+                    enex_files_from_folder = [os.path.join(source, f) for f in os.listdir(source) if f.endswith('.enex')]
+                    enex_files.extend(enex_files_from_folder)
+                else:
+                    log_debug(f"Error: Directory {source} does not exist.", logging.WARNING)
+            elif os.path.isfile(source):
+                if source.endswith('.enex'):
+                    if os.path.exists(source):
+                        enex_files.append(source)
+                    else:
+                        log_debug(f"Error: File {source} does not exist.", logging.WARNING)
+                else:
+                    log_debug(f"Warning: {source} is not an ENEX file.", logging.WARNING)
+            else:
+                log_debug(f"Error: {source} is not a folder nor a file?", logging.WARNING)
+    else:
+        # Default value for dev ;-)
+        enex_directory = 'Tests/Temp/'
+        enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('Carnet export test 2.enex')]
+        
+    
+    # S'il y a l'argument enex_folder défini, on met à jour enex_directory
+        # et s'il y a l'argument enex_files défini, on met à jour enex_files
+        # Sinon on met à jour enex_files avec les fichiers présent dans le dossier
+    # Sinon 
+    
     # my_options.tag = "Valeur pour le tag"
     # my_options.import_notebook_name = args.zip
-    my_options.is_debug = args.debug #args.debug
-    my_options.zip_result = args.zip
-    if args.enex_files: # dev mode
-        enex_files = args.enex_files
-        my_options.is_debug = True
-        my_options.zip_result = False
+    my_options.is_debug = args.debug # Faux par défaut
+    my_options.zip_result = args.zip # Vrai par défaut
+        
     
     log_debug(f"Launched with CLI", logging.DEBUG)
     # Liste des fichiers enex dans le répertoire
