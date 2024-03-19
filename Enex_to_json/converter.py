@@ -824,7 +824,7 @@ def main():
     
     parser = argparse.ArgumentParser(description="Convert ENEX files.")
     parser.add_argument("--enex_sources", nargs="+", help="List of ENEX files to convert")
-    parser.add_argument("--zip", action="store_true", default=True, help="Create a zip file")
+    parser.add_argument("--nozip", action="store_true", default=False, help="Desactivate creation of a zip file")
     parser.add_argument("--debug", action="store_true", default=False, help="Create a debug file")
     parser.add_argument("--nogui", action="store_true", default=False, help="Launch without GUI (and with default parameter if none set)")
     
@@ -870,14 +870,13 @@ def main():
     # my_options.tag = "Valeur pour le tag"
     # my_options.import_notebook_name = args.zip
     my_options.is_debug = args.debug # Faux par défaut
-    my_options.zip_result = args.zip # Vrai par défaut
+    my_options.zip_result = not args.nozip # Vrai par défaut
         
     
-    log_debug(f"Launched with CLI", logging.DEBUG)
+    log_debug(f"Launched with CLI, ZIP = {my_options.zip_result}, DEBUG = {my_options.is_debug}", logging.DEBUG)
     # Liste des fichiers enex dans le répertoire
     convert_files(enex_files, my_options)
 
-    
 
 if __name__ == "__main__":
     main()
