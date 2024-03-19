@@ -826,6 +826,7 @@ def main():
     parser.add_argument("--enex_sources", nargs="+", help="List of ENEX files to convert")
     parser.add_argument("--zip", action="store_true", default=True, help="Create a zip file")
     parser.add_argument("--debug", action="store_true", default=False, help="Create a debug file")
+    parser.add_argument("--nogui", action="store_true", default=False, help="Launch without GUI (and with default parameter if none set)")
     
 
     args = parser.parse_args()
