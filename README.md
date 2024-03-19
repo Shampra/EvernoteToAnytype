@@ -14,11 +14,20 @@ pyinstaller main.py --additional-hooks-dir=.
 
 ## Usage
 - Export your Evernote Notes (notes or a full notebook)
-- Launch the gui with "main" file
-- drop your enex file to convert (or a folder with them inside) or select them with the button
-- clic to Convert
+- If you use the release, launch run.exe
+    - with some parameter to execute with CLI (command line)
+    - directly to open the GUI (graphic interface) 
 
-A _Converted_files zip  is created in the folder of your enex files, containing the converted files. Import them into Anytype.
+- **With GUI**
+    - drop your enex file(s) to convert (or a folder with them inside) or select them with the button
+    - clic to Convert
+
+- **With CLI**, you must provide parameters
+    - "--enex_sources", mandatory : one or more folder/file
+    - "--debug", optional : enables creation of a debug file
+    - "--nozip", optional : deactivates the creation of a zip file with the result, so you'll have a directory with all the json files
+
+A _Converted_files zip is created in the folder of your enex files, containing the converted files. Import them into Anytype.
 
 **Warning**
 It's under progress. 
@@ -32,14 +41,18 @@ Some cases may not be covered yet; you can report them to me.
 
 
 ## Progess
-**Last update : v0.8.3** 
+**v0.8.3** 
 - [ ] **Tag Management** : Create a "Evernote tag" relation, add all your tag, keep them in each note
+- [ ] **Reliability and log** 
+
+**Last update : v0.8.4** 
+- [ ] **CLI/GUI** : lets you choose CLI or GUI and modify parameters
 - [ ] **Reliability and log** 
 
 **Todo**
 - [ ] **Files** : Import file **-> Bug in AT, issue reported**
 - [ ] **List** case with `<en-todo checked="false" />`
-- [ ] **Tâche Evernote** Transform to text with checkbox?
+- [ ] **Evernote Tasks** Transform to text with checkbox?
 - [ ] **Bug** Table with multiples merged cells (which Anytype doesn't support); it's work if only 1 roswpan / colspan
 - [ ] **Bug** Color conversion... AT has limited choice and sometimes "grey" in EN become "green" in AT
 - [ ] **Notebook management** Evernote doesn't export notebook name... To be reviewed if the creation of a notebook during conversion is requested...
