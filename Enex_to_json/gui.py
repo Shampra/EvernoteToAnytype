@@ -7,9 +7,6 @@ import os
 from models.options import Options
 import base64
 
-"""Version"""
-version="v0.8.2"
-
 class Tk(ctk.CTk, TkinterDnD.DnDWrapper):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -93,7 +90,7 @@ class Interface:
         self.root.drop_target_register(DND_FILES)
         self.root.dnd_bind('<<Drop>>', self.on_drop)
 
-def main():
+def main(version):
     icon = \
         """AAABAAEAgIAAAAEAIAAoCAEAFgAAACgAAACAAAAAAAEAAAEAIAAAAAAAAAABACMuAAAjLgAAAAAA
     AAAAAACAgIAAgICAAICAgACAgIAAgICAAICAgACAgIAAgICAAICAgACAgIAAgICAAICAgACAgIAA
@@ -1304,4 +1301,4 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
-    main()
+    main("")

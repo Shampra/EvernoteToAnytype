@@ -819,25 +819,16 @@ def convert_files(enex_files_list: list, options: Type[Options]):
     return nb_notes
             
 
-def main():
+def main(version):
     enex_files =[]
     
     parser = argparse.ArgumentParser(description="Convert ENEX files.")
     parser.add_argument("--enex_sources", nargs="+", help="List of ENEX files to convert")
     parser.add_argument("--nozip", action="store_true", default=False, help="Desactivate creation of a zip file")
     parser.add_argument("--debug", action="store_true", default=False, help="Create a debug file")
-    parser.add_argument("--nogui", action="store_true", default=False, help="Launch without GUI (and with default parameter if none set)")
-    
-
+    parser.add_argument("--test", action="store_true", default=False, help="test with a defaut file")
     args = parser.parse_args()
     
-    # S'il y a l'argument enex_sources défini, on parcours les éléments
-        # Si un élément est un dossier, on liste les fichiers *.enex de ce dossier et on les ajoute à enex_files
-        # Si c'est un fichier, 
-            # on vérifie que le fichier est en *.enex sinon message d'erreur (sans interrompre le programme)
-            # on vérifie qu'il existe sinon message d'erreur (sans interrompre le programme)
-            # Si tout est ok on l'ajoute à enex_files (en gardant le chemin complet bien sûr)
-    # S'il n'y a pas l'argument enex_sources défini, rien à faire car enex_files est déjà rempli par défaut
     if args.enex_sources:
         for source in args.enex_sources:
             if os.path.isdir(source):
@@ -856,16 +847,12 @@ def main():
                     log_debug(f"Warning: {source} is not an ENEX file.", logging.WARNING)
             else:
                 log_debug(f"Error: {source} is not a folder nor a file?", logging.WARNING)
-    else:
+    elif args.test:
         # Default value for dev ;-)
         enex_directory = 'Tests/Temp/'
         enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('Carnet export test 2.enex')]
         
-    
-    # S'il y a l'argument enex_folder défini, on met à jour enex_directory
-        # et s'il y a l'argument enex_files défini, on met à jour enex_files
-        # Sinon on met à jour enex_files avec les fichiers présent dans le dossier
-    # Sinon 
+        
     
     # my_options.tag = "Valeur pour le tag"
     # my_options.import_notebook_name = args.zip
@@ -873,10 +860,14 @@ def main():
     my_options.zip_result = not args.nozip # Vrai par défaut
         
     
-    log_debug(f"Launched with CLI, ZIP = {my_options.zip_result}, DEBUG = {my_options.is_debug}", logging.DEBUG)
+    log_debug(f"Launched with CLI {version}, ZIP = {my_options.zip_result}, DEBUG = {my_options.is_debug}", logging.DEBUG)
     # Liste des fichiers enex dans le répertoire
-    convert_files(enex_files, my_options)
+    if enex_files:
+        convert_files(enex_files, my_options)
+    else:
+        log_debug(f"The 'enex_sources' parameter is empty or wrong, it must be defined.", logging.ERROR)
+    
 
 
 if __name__ == "__main__":
-    main()
+    main("")
