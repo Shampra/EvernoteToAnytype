@@ -14,7 +14,7 @@ pyinstaller main.py --additional-hooks-dir=.
 
 ## Usage
 - Export your Evernote Notes (notes or a full notebook)
-- If you use the release, launch run.exe
+- Launch run.exe (if you use the release) or run.py (with python files from Github)
     - with some parameter to execute with CLI (command line)
     - directly to open the GUI (graphic interface) 
 
