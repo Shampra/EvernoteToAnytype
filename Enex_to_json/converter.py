@@ -794,9 +794,6 @@ def convert_files(enex_files_list: list, options: Type[Options]):
 
             # Nettoyer les clés "shifting" si nécessaire
             page_model.cleanup()
-
-            # Générer le nom du fichier JSON en supprimant l'extension .enex
-            # json_file_name = os.path.splitext(os.path.basename(enex_file))[0] + '.json'
             
             note_title = page_model.page_json["snapshot"]["data"]["details"]["name"]
             # Filename with the create date, in case several notes have the same title
@@ -850,16 +847,13 @@ def main(version):
     elif args.test:
         # Default value for dev ;-)
         enex_directory = 'Tests/Temp/'
-        enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('Carnet export test 2.enex')]
+        enex_files = [os.path.join(enex_directory, f) for f in os.listdir(enex_directory) if f.endswith('Bug OSI.enex')]
         
         
-    
     # my_options.tag = "Valeur pour le tag"
-    # my_options.import_notebook_name = args.zip
     my_options.is_debug = args.debug # Faux par défaut
     my_options.zip_result = not args.nozip # Vrai par défaut
         
-    
     log_debug(f"Launched with CLI {version}, ZIP = {my_options.zip_result}, DEBUG = {my_options.is_debug}", logging.DEBUG)
     # Liste des fichiers enex dans le répertoire
     if enex_files:
@@ -867,7 +861,6 @@ def main(version):
     else:
         log_debug(f"The 'enex_sources' parameter is empty or wrong, it must be defined.", logging.ERROR)
     
-
 
 if __name__ == "__main__":
     main("")
