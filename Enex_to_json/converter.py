@@ -818,6 +818,8 @@ def convert_files(enex_files_list: list, options: Type[Options]):
 
 def main(version):
     enex_files =[]
+    my_options.is_debug=False
+    my_options.zip_result=True
     
     parser = argparse.ArgumentParser(description="Convert ENEX files.")
     parser.add_argument("--enex_sources", nargs="+", help="List of ENEX files to convert")
@@ -843,7 +845,7 @@ def main(version):
                 else:
                     log_debug(f"Warning: {source} is not an ENEX file.", logging.WARNING)
             else:
-                log_debug(f"Error: {source} is not a folder nor a file?", logging.WARNING)
+                log_debug(f"Error: {source} is not a folder nor a file?", logging.ERROR)
     elif args.test:
         # Default value for dev ;-)
         enex_directory = 'Tests/Temp/'
@@ -859,7 +861,7 @@ def main(version):
     if enex_files:
         convert_files(enex_files, my_options)
     else:
-        log_debug(f"The 'enex_sources' parameter is empty or wrong, it must be defined.", logging.ERROR)
+        log_debug(f"No enex file to convert, check if the 'enex_sources' parameter is correct.", logging.ERROR)
     
 
 if __name__ == "__main__":
