@@ -295,3 +295,45 @@ class Tag_Option:
     
     def to_json(self):
         return self.page_json
+    
+    
+class File_Object:
+    """JSON model for a file object in Anytype"""
+
+    def __init__(self):
+        self.page_json = {
+            "sbType": "FileObject",
+            "snapshot": {
+                "data": {
+                    "details": {
+                        "backlinks": [],
+                        "id": "",
+                        "name": "",
+                        "source": ""
+                    }
+                }
+            }
+        }
+
+    def edit_id(self, value):
+        """Ajoute ou modifie l'id du fichier"""
+        self.page_json["snapshot"]["data"]["details"]["id"] = value
+        pass
+    
+    def edit_name(self, value):
+        """Ajoute  ou modifie le nom du fichier"""
+        self.page_json["snapshot"]["data"]["details"]["name"] = value
+        pass
+    
+    def edit_source(self, value):
+        """Ajoute ou modifie le chemin relatif du fichier"""
+        self.page_json["snapshot"]["data"]["details"]["source"] =  value
+        pass
+    
+    def edit_backlinks(self, value):
+        """Ajoute ou modifie la valeur de la couleur"""
+        self.page_json["snapshot"]["data"]["details"]["backlinks"].append(value)
+        pass
+    
+    def to_json(self):
+        return self.page_json
