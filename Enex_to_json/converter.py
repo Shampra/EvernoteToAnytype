@@ -86,7 +86,7 @@ def sanitize_filename(filename):
     filename = filename.strip()  # Supprimer les espaces de début et de fin
     filename = filename[:255]  # Limiter la longueur du nom de fichier à 255 caractères
     if not filename:  # Vérifier si le nom de fichier résultant est vide
-        filename = "empty_filename"  # Si vide, attribuer un nom de fichier par défaut
+        filename = "empty_filename"+generate_random_id(6)  # Si vide, attribuer un nom de fichier par défaut
     return filename
 
 
