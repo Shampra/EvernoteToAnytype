@@ -83,6 +83,10 @@ def sanitize_filename(filename):
     invalid_chars = '/\\?%*:|"<>'
     for char in invalid_chars:
         filename = filename.replace(char, '_')
+    filename = filename.strip()  # Supprimer les espaces de début et de fin
+    filename = filename[:255]  # Limiter la longueur du nom de fichier à 255 caractères
+    if not filename:  # Vérifier si le nom de fichier résultant est vide
+        filename = "empty_filename"  # Si vide, attribuer un nom de fichier par défaut
     return filename
 
 
