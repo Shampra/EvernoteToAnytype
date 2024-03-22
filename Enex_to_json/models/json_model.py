@@ -39,6 +39,11 @@ class Page:
             dict or None: Le bloc trouvé ou None s'il n'est pas trouvé.
         """
         return next((b for b in self.page_json["snapshot"]["data"]["blocks"] if b["id"] == block_id), None)
+    
+    def get_page_id(self):
+        """Retourne l'id de la page
+        """
+        return self.page_json["snapshot"]["data"]["blocks"][0]["id"]
 
     def find_parent_id(self, shifting_left):
         """
@@ -215,15 +220,18 @@ class Page:
         else:
             print(
                 f"Erreur, block {block_id} inexistant lors de l'ajout de mark")
+            
 
-    def add_file_to_block(self, block_id, hash, name, file_type, mime, size, embed_size=None, format=None):
+    def add_file_to_block(self, block_id, file_id, hash, name, file_type, mime, size, embed_size=None, format=None):
         block = self.find_block_by_id(block_id)
         if block:
             block["file"] = {}
             block["file"]["hash"] = hash
             block["file"]["name"] = name
-            block["file"]["type"] = file_type
             block["file"]["mime"] = mime
+            block["file"]["type"] = file_type
+            block["file"]["targetObjectId"] = file_id
+            
             # block["file"]["size"] = size
             if embed_size is not None:
                 # TODO
@@ -233,6 +241,8 @@ class Page:
             # Les images ont toujours un style défini
             elif file_type == "Image":
                 block["file"]["style"] = "Embed"
+            else:
+                block["file"]["style"] = "Auto"
             block["file"]["state"] = "Done"
             pass
         else:

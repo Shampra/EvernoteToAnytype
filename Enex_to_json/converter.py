@@ -38,8 +38,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+class FileInfo:
+    def __init__(self, file_id: str, filename: str, mime_type: str, file_size: int, file_type: str):
+        self.file_id = file_id
+        self.filename = filename
+        self.mime_type = mime_type
+        self.file_size = file_size
+        self.file_type = file_type
 
 def log_debug(message: str, level: int = logging.DEBUG):
+    """Fonction de gestion des logs.
+    Si l'option de debug est activé : 
+    - on met tout les log DEBUG ou supérieur dans un fichier de log 
+    - et si on exécute sous VS Code, on affiche dans la console les logging.NOSET
+    Sans l'option, on affiche les logs supérieurs à DEBUG dans la console 
+
+    Args:
+        message (str): message à logger
+        level (int, optional): logging level. Defaults to logging.DEBUG.
+    """
     if my_options.is_debug:
         if level >= logging.DEBUG:
             caller_frame = inspect.stack()[1]
@@ -49,12 +66,10 @@ def log_debug(message: str, level: int = logging.DEBUG):
         elif 'TERM_PROGRAM' in os.environ.keys() and os.environ['TERM_PROGRAM'] == 'vscode': # debug en mode dev
             print(message)
             pass
-            # logger.log(level, message)
     if level > logging.DEBUG:
         print(message)
     
         
-
 def sanitize_filename(filename):
     invalid_chars = '/\\?%*:|"<>'
     for char in invalid_chars:
@@ -62,7 +77,7 @@ def sanitize_filename(filename):
     return filename
 
 
-def generate_random_id(length = 24):
+def generate_random_id(length = 48):
     """Génère un identifiant aléatoire en hexadécimal de la longueur spécifiée""" 
     
     hex_chars = '0123456789abcdef'
@@ -233,14 +248,14 @@ def extract_top_level_text(element):
 
 
 def get_files(xml_content: ET.Element, dest_folder):
-    """_summary_
+    """Génère les fichiers en enregistrant leurs infos dans un dictionnaire
 
     Args:
         xml_file (str): Chemin du fichier xml à traiter
         dest_folder (str): Chemin pour l'enregistrement des fichiers
 
     Returns:
-        dic: dictionnaire avec 'hash du fichier': ('chemin du fichier', 'type mime du fichier') 
+        dic: dictionnaire avec ('hash du fichier': ('id du fichier','nom du fichier', 'type mime du fichier', taille, 'type AT'))
     """
     files_info_dict = {} 
     log_debug(f"-- Get files...", logging.DEBUG)
@@ -256,6 +271,7 @@ def get_files(xml_content: ET.Element, dest_folder):
             data_base64: str  = data_elem.text.strip()
             mime: str  = mime_elem.text.strip()
             file_type: str  = ""
+            file_id :str = "file" + generate_random_id()
             for type, mime_list in models.mime.TYPE.items():
                 if mime in mime_list:
                     file_type = type
@@ -285,8 +301,7 @@ def get_files(xml_content: ET.Element, dest_folder):
                 outfile.write(data_decode)
             file_size = os.path.getsize(destination_path) * 8
 
-            files_info_dict[hash_md5] = (sanitized_filename, mime, file_size, file_type)
-            
+            files_info_dict[hash_md5] = FileInfo(file_id, sanitized_filename, mime, file_size, file_type)    
         else:
             log_debug(f"--- Resource with empty element for one note", logging.DEBUG)
 
@@ -587,9 +602,14 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             
 
-def process_content_to_json(content: str, page_model, files_dict):
-    """
-    Processing <content> to create the parent element and calling a function for child elements
+def process_content_to_json(content: str, page_model, note_id, files_dict):
+    """Processing <content> to create the parent element and calling a function for child elements
+
+    Args:
+        content (str): _description_
+        page_model (_type_): objet Page généré pour cette note
+        note_id (_type_): id racine (pour rattachements fichiers, blocs, ...)
+        files_dict (_type_): Dictionnaire des fichiers dispo
     """
     log_debug(f"- Converting content...", logging.DEBUG)
     # Converting to soup for specific html parsing
@@ -598,7 +618,7 @@ def process_content_to_json(content: str, page_model, files_dict):
     # Créer l'élément JSON pour la première div (shifting = -1)
     root_block = soup.find('en-note')
     if root_block:
-        block_id = generate_random_id()
+        block_id = note_id
         page_model.add_block(block_id,-1)
         first_text = root_block.find_all(string=True, recursive=False)
         if first_text:
@@ -633,7 +653,6 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
             div_id = generate_random_id()
         shifting_left = extract_shifting_left(child)
         div_text = extract_top_level_text(child)
-        div_tag = child.get('id')
 
         # On commence par les blocs sans texte
         if child.name == 'hr':
@@ -645,7 +664,12 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
         elif child.name == 'en-media':
             hash = child.get('hash')
             if hash in files_dict:
-                sanitized_filename, mime, file_size, file_type = files_dict[hash]
+                file_info :FileInfo = files_dict[hash]
+                file_id = file_info.file_id
+                sanitized_filename = file_info.filename
+                mime = file_info.mime_type
+                file_size = file_info.file_size
+                file_type = file_info.file_type
                 # Redimensionné? Il faut retourner width="340px" divisé par style="--en-naturalWidth:1280"  style="--en-naturalWidth:1280; --en-naturalHeight:512;" width="340px" />
                 text_style = child.get('style')
                 styles = extract_styles(text_style) if text_style else {}
@@ -660,10 +684,8 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                 style_attr = child.get('style')
                 format = 'link' if style_attr and '--en-viewAs:attachment;' in style_attr else None
                 page_model.add_block(div_id, shifting=shifting_left)
-                page_model.add_file_to_block(div_id, hash = hash, name = sanitized_filename, file_type = file_type, mime = mime, size = file_size, embed_size = relative_width, format=format )
+                page_model.add_file_to_block(div_id, file_id = file_id, hash = hash, name = sanitized_filename, file_type = file_type, mime = mime, size = file_size, embed_size = relative_width, format=format )
             
-                # TODO : quand AnyType permettra l'import des fichiers     
-                       
         # Traitement bloc code (div racine sans texte)
         elif child.name == 'div' and 'style' in child.attrs and '--en-codeblock:true' in child['style']:
                 process_codeblock(child, div_id, page_model)
@@ -727,6 +749,26 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                     page_model.edit_text_key(div_id,"style","Header" + child.name[1:])
 
 
+def process_file_to_json(page_id :str, files_dict :dict[str, FileInfo], working_folder :str):
+    # On génère le modèle json
+    for hash_md5, file_info in files_dict.items():
+        # On génère le modèle json pour chaque fichier
+        file_json: Model.File_Object = Model.File_Object()
+        file_json.edit_id(file_info.file_id)
+        file_json.edit_backlinks(page_id)
+        # Génération du nom : ici il faut retirer l'extension
+        filename_without_extension = os.path.splitext(file_info.filename)[0]
+        file_json.edit_name(filename_without_extension)
+        file_with_path = "files/"+file_info.filename
+        file_json.edit_source(file_with_path)
+        # Chemin complet pour enregistrer le fichier JSON
+        filepath = os.path.join(working_folder, f"{file_info.file_id}.json")
+        # On génère le fichier à partir de Key (donc unique pour chaque chaîne)
+        with open(filepath, 'w', encoding='utf-8') as file:
+            json.dump(file_json.to_json(), file, indent=2)
+    
+    
+
 def convert_files(enex_files_list: list, options: Type[Options]):
     """Convert enex file from the list into json files
 
@@ -771,11 +813,20 @@ def convert_files(enex_files_list: list, options: Type[Options]):
         except Exception as e:
             log_debug(f"XML treatment error : {e}", logging.ERROR)
         
-        # is unique or multiple note?
+        # Parcours des notes dans le fichier
         for note_xml in root.iter("note"):
             log_debug(f"Treatment note {nb_notes}...", logging.INFO)
-            # Traitement des fichiers (base64 vers fichiers)
+            
+            # Attribution de l'ID de la page
+            note_id :str = generate_random_id()
+            
+            # Traitement des fichiers (base64 vers fichiers) avant le reste car référencé dans le parcours des notes
             files_dict = get_files(note_xml, files_dest_folder)
+            log_debug("Contenu de files_dict :", logging.NOTSET)
+            [log_debug(f"{hash_md5}: (file_id={file_info.file_id}, file_name={file_info.filename}, mime_type={file_info.mime_type}, file_size={file_info.file_size}, file_type={file_info.file_type})", logging.NOTSET) for hash_md5, file_info in files_dict.items()]
+
+            # Génération des JSON fichiers
+            process_file_to_json(note_id,files_dict, working_folder)
             
             # Utilisation de la classe Model.Page pour créer le JSON
             page_model: Model.Page = Model.Page()
@@ -787,7 +838,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
                 continue
             
             content: str = content_element.text
-            process_content_to_json(content, page_model, files_dict)
+            process_content_to_json(content, page_model, note_id, files_dict)
             
             # Processing xml tags (other than <content>)
             process_details_to_json(note_xml, page_model, working_folder)
@@ -860,6 +911,7 @@ def main(version):
     # Liste des fichiers enex dans le répertoire
     if enex_files:
         convert_files(enex_files, my_options)
+        
     else:
         log_debug(f"No enex file to convert, check if the 'enex_sources' parameter is correct.", logging.ERROR)
     
