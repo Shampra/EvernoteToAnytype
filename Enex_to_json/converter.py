@@ -40,6 +40,15 @@ logger = logging.getLogger(__name__)
 
 class FileInfo:
     def __init__(self, file_id: str, filename: str, mime_type: str, file_size: int, file_type: str):
+        """Gestion des infos d'un fichier
+
+        Args:
+            file_id (str): random id pour le fichier
+            filename (str): Nom du fichier (attention, fichier généré avec hash + filename)
+            mime_type (str): mime
+            file_size (int): taille
+            file_type (str): type Anytype
+        """
         self.file_id = file_id
         self.filename = filename
         self.mime_type = mime_type
@@ -294,7 +303,9 @@ def get_files(xml_content: ET.Element, dest_folder):
             # Calculer le hash (MD5) du contenu
             hash_md5 = hashlib.md5(data_decode).hexdigest()
 
-            destination_path = os.path.join(dest_folder, sanitized_filename)
+            #Avoid crushes multiples files with same name
+            unique_sanitized_filename = hash_md5 + sanitized_filename
+            destination_path = os.path.join(dest_folder, unique_sanitized_filename)
             if not os.path.exists(dest_folder):
                 os.makedirs(dest_folder)
             with open(destination_path, 'wb') as outfile:
@@ -686,8 +697,8 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                 page_model.add_block(div_id, shifting=shifting_left)
                 page_model.add_file_to_block(div_id, file_id = file_id, hash = hash, name = sanitized_filename, file_type = file_type, mime = mime, size = file_size, embed_size = relative_width, format=format )
             
-        # Traitement bloc code (div racine sans texte)
-        elif child.name == 'div' and 'style' in child.attrs and '--en-codeblock:true' in child['style']:
+        # Traitement bloc code (div racine sans texte); "-en-codeblock:true" et "--en-codeblock:true" co-existent...
+        elif child.name == 'div' and 'style' in child.attrs and '-en-codeblock:true' in child['style']:
                 process_codeblock(child, div_id, page_model)
         #Traitement table
         elif child.name == 'table':
@@ -696,7 +707,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
         elif div_text:
             # les div enfant des blocs codes doivent être exclues du traitement global
             parent_div = child.find_parent('div')
-            if child.name == 'div' and parent_div and 'style' in parent_div.attrs and '--en-codeblock:true' in parent_div['style']:
+            if child.name == 'div' and parent_div and 'style' in parent_div.attrs and '-en-codeblock:true' in parent_div['style']:
                 pass
             # Traitements spécifiques
             elif child.name in ['div', 'h1', 'h2', 'h3']:
