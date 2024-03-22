@@ -39,7 +39,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class FileInfo:
-    def __init__(self, file_id: str, filename: str, mime_type: str, file_size: int, file_type: str):
+    def __init__(self, file_id: str, unique_filename: str, original_filename: str, mime_type: str, file_size: int, file_type: str):
         """Gestion des infos d'un fichier
 
         Args:
@@ -50,7 +50,8 @@ class FileInfo:
             file_type (str): type Anytype
         """
         self.file_id = file_id
-        self.filename = filename
+        self.original_filename = original_filename
+        self.unique_filename = unique_filename
         self.mime_type = mime_type
         self.file_size = file_size
         self.file_type = file_type
@@ -294,10 +295,10 @@ def get_files(xml_content: ET.Element, dest_folder):
 
             elt_file_name = attributes_elem.find("./file-name")
             if elt_file_name is not None and elt_file_name.text is not None:
-                file_name: str = attributes_elem.find("./file-name").text.strip()
+                original_filename: str = attributes_elem.find("./file-name").text.strip()
             else:
-                file_name = "noname_" + data_base64[:6]
-            sanitized_filename = sanitize_filename(file_name)
+                original_filename = "noname_" + data_base64[:6]
+            sanitized_filename = sanitize_filename(original_filename)
             try:
                 data_decode = base64.b64decode(data_base64)
             except base64.binascii.Error as e:
@@ -316,7 +317,7 @@ def get_files(xml_content: ET.Element, dest_folder):
                 outfile.write(data_decode)
             file_size = os.path.getsize(destination_path) * 8
 
-            files_info_dict[hash_md5] = FileInfo(file_id, sanitized_filename, mime, file_size, file_type)    
+            files_info_dict[hash_md5] = FileInfo(file_id, unique_sanitized_filename, original_filename, mime, file_size, file_type)    
         else:
             log_debug(f"--- Resource with empty element for one note", logging.DEBUG)
 
@@ -681,7 +682,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
             if hash in files_dict:
                 file_info :FileInfo = files_dict[hash]
                 file_id = file_info.file_id
-                sanitized_filename = file_info.filename
+                original_filename = file_info.original_filename
                 mime = file_info.mime_type
                 file_size = file_info.file_size
                 file_type = file_info.file_type
@@ -699,7 +700,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                 style_attr = child.get('style')
                 format = 'link' if style_attr and '--en-viewAs:attachment;' in style_attr else None
                 page_model.add_block(div_id, shifting=shifting_left)
-                page_model.add_file_to_block(div_id, file_id = file_id, hash = hash, name = sanitized_filename, file_type = file_type, mime = mime, size = file_size, embed_size = relative_width, format=format )
+                page_model.add_file_to_block(div_id, file_id = file_id, hash = hash, name = original_filename, file_type = file_type, mime = mime, size = file_size, embed_size = relative_width, format=format )
             
         # Traitement bloc code (div racine sans texte); "-en-codeblock:true" et "--en-codeblock:true" co-existent...
         elif child.name == 'div' and 'style' in child.attrs and '-en-codeblock:true' in child['style']:
@@ -772,9 +773,9 @@ def process_file_to_json(page_id :str, files_dict :dict[str, FileInfo], working_
         file_json.edit_id(file_info.file_id)
         file_json.edit_backlinks(page_id)
         # Génération du nom : ici il faut retirer l'extension
-        filename_without_extension = os.path.splitext(file_info.filename)[0]
+        filename_without_extension = os.path.splitext(file_info.original_filename)[0]
         file_json.edit_name(filename_without_extension)
-        file_with_path = "files/"+file_info.filename
+        file_with_path = "files/"+file_info.unique_filename
         file_json.edit_source(file_with_path)
         # Chemin complet pour enregistrer le fichier JSON
         filepath = os.path.join(working_folder, f"{file_info.file_id}.json")
@@ -838,7 +839,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             # Traitement des fichiers (base64 vers fichiers) avant le reste car référencé dans le parcours des notes
             files_dict = get_files(note_xml, files_dest_folder)
             log_debug("Contenu de files_dict :", logging.NOTSET)
-            [log_debug(f"{hash_md5}: (file_id={file_info.file_id}, file_name={file_info.filename}, mime_type={file_info.mime_type}, file_size={file_info.file_size}, file_type={file_info.file_type})", logging.NOTSET) for hash_md5, file_info in files_dict.items()]
+            [log_debug(f"{hash_md5}: (file_id={file_info.file_id}, file_name={file_info.unique_filename}, original file_name={file_info.original_filename}, mime_type={file_info.mime_type}, file_size={file_info.file_size}, file_type={file_info.file_type})", logging.NOTSET) for hash_md5, file_info in files_dict.items()]
 
             # Génération des JSON fichiers
             process_file_to_json(note_id,files_dict, working_folder)
