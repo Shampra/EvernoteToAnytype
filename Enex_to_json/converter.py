@@ -695,22 +695,33 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                 mime = file_info.mime_type
                 file_size = file_info.file_size
                 file_type = file_info.file_type
-                # Redimensionné? Il faut retourner width="340px" divisé par style="--en-naturalWidth:1280"  style="--en-naturalWidth:1280; --en-naturalHeight:512;" width="340px" />
+                # Redimensionné? Il faut retourner width="340px" divisé par style="--en-naturalWidth:1280" ; ex : style="--en-naturalWidth:1280; --en-naturalHeight:512;" width="340px" />
                 text_style = child.get('style')
                 styles = extract_styles(text_style) if text_style else {}
                 
-                embed_width = child.get('width')
-                original_width = int(styles.get("--en-naturalWidth", "0"))
+                embed_width = child.get('width') # Redimension dans Evernote
+                original_width = styles.get("--en-naturalWidth") # Dimension naturelle de l'objet
+                relative_width = None  # Ratio de la version embed, la seule valeur utilisée dans Anytype
+                # On calcul, en mettant la valeur par défaut pour toutes les erreurs potentielles
+                try:
+                    embed_width_value = float(embed_width.replace("px", ""))
+                    original_width_value = float(original_width)
+                    embed_width_int = int(embed_width_value)
+                    original_width_int = int(original_width_value)
+                    if embed_width_int != 0:
+                        relative_width = embed_width_int / original_width_int
+                except Exception :
+                    relative_width = None
                 
-                relative_width = None  
-                if embed_width is not None and original_width is not None and original_width != 0:
-                    relative_width = float(embed_width.replace("px", "")) / original_width
+                
                 # Format lien? 
                 style_attr = child.get('style')
                 format = 'link' if style_attr and '--en-viewAs:attachment;' in style_attr else None
-                page_model.add_block(div_id, shifting=shifting_left)
-                page_model.add_file_to_block(div_id, file_id = file_id, hash = hash, name = original_filename, file_type = file_type, mime = mime, size = file_size, embed_size = relative_width, format=format )
-            
+                page_model.add_block(div_id, shifting=shifting_left, width = relative_width)
+                page_model.add_file_to_block(div_id, file_id = file_id, hash = hash, name = original_filename, file_type = file_type, mime = mime, size = file_size, format=format )
+
+                
+                
         # Traitement bloc code (div racine sans texte); "-en-codeblock:true" et "--en-codeblock:true" co-existent...
         elif child.name == 'div' and 'style' in child.attrs and '-en-codeblock:true' in child['style']:
                 process_codeblock(child, div_id, page_model)

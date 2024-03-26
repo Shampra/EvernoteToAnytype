@@ -222,7 +222,7 @@ class Page:
                 f"Erreur, block {block_id} inexistant lors de l'ajout de mark")
             
 
-    def add_file_to_block(self, block_id, file_id, hash, name, file_type, mime, size, embed_size=None, format=None):
+    def add_file_to_block(self, block_id, file_id, hash, name, file_type, mime, size, format=None):
         block = self.find_block_by_id(block_id)
         if block:
             block["file"] = {}
@@ -233,9 +233,6 @@ class Page:
             block["file"]["targetObjectId"] = file_id
             
             # block["file"]["size"] = size
-            if embed_size is not None:
-                # TODO
-                pass
             if format == "link":
                 block["file"]["style"] = "Link"
             # Les images ont toujours un style défini
