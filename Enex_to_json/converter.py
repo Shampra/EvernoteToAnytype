@@ -744,14 +744,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                 
                 # Traitements styles du bloc
                 style = extract_styles(child.get('style'))
-                log_debug(f"Extraction styles : {style}",logging.NOTSET)
-                if 'padding-left' in style:
-                    # Le traitement est déjà fait, on ne fait rien
-                    pass
-                elif '--en-codeblock' in style:
-                    # Traitement à définir plus tard de tous les sous-blocs
-                    pass
-                elif 'text-align' in style:
+                if 'text-align' in style:
                     log_debug(f"Extraction style text_align : {style}",logging.NOTSET)
                     if style['text-align'] == 'center':
                         page_model.edit_block_key(div_id,"align","AlignCenter")
