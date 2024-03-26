@@ -3,5 +3,4 @@ scipy
 tk
 tkinterdnd2
 customtkinter
-cssutils
 pyinstaller

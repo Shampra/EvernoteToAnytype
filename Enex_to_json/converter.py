@@ -14,7 +14,7 @@ import time
 from typing import List, Type
 import logging
 import inspect
-import cssutils
+
 
 
 from models.language_patterns import language_patterns
@@ -107,11 +107,20 @@ def extract_shifting_left(div):
         for prop in style_properties:
             if 'margin-left' in prop or 'padding-left' in prop:
                 value_str = prop.split(':')[1].strip()
-                if 'em' in value_str:
-                    return int(cssutils.css.CSSValue(value_str).value * 16)
-                elif 'px' in value_str:
-                    return int(value_str.replace('px', '').strip())
-                else:
+                try:
+                    # Enlever les unités 'em' ou 'px' de la chaîne pour obtenir la valeur entière
+                    if 'em' in value_str:
+                        value_int = int(value_str.replace('em', '').strip()) * 16
+                    elif 'px' in value_str:
+                        value_int = int(value_str.replace('px', '').strip())
+                    else:
+                        # Si aucune unité n'est spécifiée, retourner une valeur par défaut
+                        log_debug(f"Unknown shifting left value: {value_str}", logging.WARNING)
+                        return 16
+                    return value_int
+                except ValueError:
+                    # En cas d'erreur de conversion, retourner une valeur par défaut
+                    log_debug(f"Invalid shifting left value: {value_str}", logging.WARNING)
                     return 16
     return 0
 
@@ -735,6 +744,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                 
                 # Traitements styles du bloc
                 style = extract_styles(child.get('style'))
+                log_debug(f"Extraction styles : {style}",logging.NOTSET)
                 if 'padding-left' in style:
                     # Le traitement est déjà fait, on ne fait rien
                     pass
@@ -742,6 +752,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                     # Traitement à définir plus tard de tous les sous-blocs
                     pass
                 elif 'text-align' in style:
+                    log_debug(f"Extraction style text_align : {style}",logging.NOTSET)
                     if style['text-align'] == 'center':
                         page_model.edit_block_key(div_id,"align","AlignCenter")
                     elif style['text-align'] == 'right':
