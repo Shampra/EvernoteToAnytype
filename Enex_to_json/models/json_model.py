@@ -84,7 +84,7 @@ class Page:
                 children_ids.append(div_id)
         else:
             print(
-                f"Erreur, block {parent_id} inexistant lors de l'ajout d'enfant {div_id}")
+                f"Erreur, bloc {parent_id} inexistant lors de l'ajout d'enfant {div_id}")
 
     def add_block(self, block_id, shifting=None, width=None, align=None, text=None):
         """Création d'un blocs avec gestion parent/enfant ou 1er bloc
