@@ -204,6 +204,7 @@ def extract_color_from_style(style):
     Returns:
         string: color name
     """
+    
     colors = {
         "grey": (182, 182, 182),
         "yellow": (236, 217, 27),
@@ -226,9 +227,26 @@ def extract_color_from_style(style):
         "lime": (183, 247, 209),
         "black": (51,51,51) # couleur mise automatiquement dans certains cas sous EN (pas de black sur AT mais ça sera ignoré)
     }
+    default_color="default"
 
     def rgb_to_tuple(rgb):
-        return tuple(int(x) for x in rgb.split(","))
+        try:
+            if "%" in rgb:
+                # Gérer les valeurs en pourcentage
+                values = [int(float(val[:-1]) * 255 / 100) for val in rgb.split(",")]
+            else:
+                # Gérer les valeurs entières ou en virgule flottante
+                values = [int(float(val)) if "." in val else int(val) for val in rgb.split(",")]
+
+            # Vérifier si le nombre de valeurs est exactement 3
+            if len(values) == 3:
+                return tuple(values)
+            else:
+                raise ValueError("Invalid RGB format")
+
+        except (ValueError, IndexError):
+            # En cas d'erreur, retourner le tuple par défaut
+            return (0, 0, 0)
     
     
     
@@ -246,18 +264,26 @@ def extract_color_from_style(style):
         rgb_value = style.split("(")[1].split(")")[0]
         try:
             rgb_components = rgb_to_tuple(rgb_value)
-            return closest_color(rgb_components)
+            if all(component < 50 for component in rgb_components):
+                return default_color
+            else:
+                return closest_color(rgb_components)
         except ValueError:
-            return "red"
+            return default_color
     # Vérifier si le style est au format hexadécimal
     elif style.startswith("#") and (len(style) == 7 or len(style) == 4):
         if len(style) == 4:
             style = "#" + style[1] * 2 + style[2] * 2 + style[3] * 2           
         hex_value = style.lstrip("#")
         rgb_components = tuple(int(hex_value[i:i+2], 16) for i in (0, 2, 4))
-        return closest_color(rgb_components)
+        if all(component < 50 for component in rgb_components):
+            return default_color
+        else:
+            return closest_color(rgb_components)
+    elif style in ('red', 'blue', 'green', 'black'):
+        return style
     else:
-        return "red"  # Format non reconnu, rouge mis par défaut
+        return default_color  # Format non reconnu, rouge mis par défaut
 
 
 # Fonction pour extraire le texte de niveau supérieur sans garder le texte des sous-éléments
@@ -678,12 +704,12 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
             if "color" in styles:
                 formatting_type = "TextColor"
                 param = extract_color_from_style(styles["color"])
-                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                log_debug(f"Ajout format {formatting_type if formatting_type else None} = {param} de {start} à {end} -- Couleur originelle : {styles["color"]}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             if 'background-color' in styles:
                 formatting_type = "BackgroundColor"
                 param = extract_color_from_style(styles["background-color"])
-                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                log_debug(f"Ajout format {formatting_type if formatting_type else None} = {param} de {start} à {end} -- Couleur originelle : {styles["color"]}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             if tag_name == 'a':
                 formatting_type = "Link"
