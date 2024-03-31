@@ -14,6 +14,8 @@ import time
 from typing import List, Type
 import logging
 import inspect
+from urllib.parse import urlparse
+import urllib.request
 
 
 
@@ -27,6 +29,9 @@ warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
 
 # Déclarer options en tant que variable globale
 my_options = Options()
+ # Définition des balises block 
+liste_balisesBlock = ['div', 'p', 'hr', 'br', 'h1', 'h2', 'h3','en-media','table', 'img','li']
+
 
 # Configurer le logging
 logging.basicConfig(
@@ -67,15 +72,14 @@ def log_debug(message: str, level: int = logging.DEBUG):
         message (str): message à logger
         level (int, optional): logging level. Defaults to logging.DEBUG.
     """
+    caller_frame = inspect.stack()[1]
+    caller_func = caller_frame[3].ljust(30)
+    caller_lineno = str(caller_frame[2]).ljust(4)
     if my_options.is_debug:
         if level >= logging.DEBUG:
-            caller_frame = inspect.stack()[1]
-            caller_func = caller_frame[3]
-            caller_lineno = caller_frame[2]
             logger.log(level, f"{caller_func} l.{caller_lineno} - {message}")
-        elif 'TERM_PROGRAM' in os.environ.keys() and os.environ['TERM_PROGRAM'] == 'vscode': # debug en mode dev
-            print(message)
-            pass
+        if 'TERM_PROGRAM' in os.environ.keys() and os.environ['TERM_PROGRAM'] == 'vscode': # debug en mode dev, on affiche tout
+            print(f"{caller_func} l.{caller_lineno} - {message}")
     if level > logging.DEBUG:
         print(message)
     
@@ -140,14 +144,11 @@ def extract_tag_info(contenu_div, tags_list):
             'end': end position in contenu_div
         }
     """    
-    # Analyser le contenu HTML
-    
-    ######### Tag avec tout
-    
+    # Analyser le contenu HTML   
+    log_debug(f"Recherche des chaines mises en forme pour {contenu_div}", logging.NOTSET)
     # On recréé un objet soup à partir de l'objet tag transmis
     contenu_str = str(contenu_div)
     soup = BeautifulSoup(str(contenu_div), 'html.parser')
-    # TODO : voir si on peut transmettre un soup plutôt que tag?
     
     # Initialiser une liste pour stocker les informations des balises
     tags_info = []
@@ -229,6 +230,8 @@ def extract_color_from_style(style):
     def rgb_to_tuple(rgb):
         return tuple(int(x) for x in rgb.split(","))
     
+    
+    
     def closest_color(rgb):
         # Vérifier s'il y a une correspondance exacte dans EN_bck_color
         exact_match = [key for key, value in EN_bck_color.items() if value == rgb]
@@ -239,10 +242,13 @@ def extract_color_from_style(style):
         return list(colors.keys())[index]
 
     # Vérifier si le style est au format rgb()
-    if style.startswith("rgb("):
+    if style.startswith(("rgb(", "rgba(")):
         rgb_value = style.split("(")[1].split(")")[0]
-        rgb_components = rgb_to_tuple(rgb_value)
-        return closest_color(rgb_components)
+        try:
+            rgb_components = rgb_to_tuple(rgb_value)
+            return closest_color(rgb_components)
+        except ValueError:
+            return "red"
     # Vérifier si le style est au format hexadécimal
     elif style.startswith("#") and (len(style) == 7 or len(style) == 4):
         if len(style) == 4:
@@ -254,19 +260,26 @@ def extract_color_from_style(style):
         return "red"  # Format non reconnu, rouge mis par défaut
 
 
-# Fonction pour extraire le texte de niveau supérieur sans garder le texte des div
+# Fonction pour extraire le texte de niveau supérieur sans garder le texte des sous-éléments
 def extract_top_level_text(element):
-    """
-    Return the text of a block without text in children block
+    """Extract top level text without text inside childen tags
+
+    Returns:
+        str: text
     """
     result = []
     for item in element.contents:
-        if isinstance(item, str):
+        log_debug(f"extraction top level, item {item}")
+        if isinstance(item, str): # sans balise
             result.append(item)
-        elif item.name == 'div':
+            log_debug(f"------ chaine simple, on ajoute {item}")
+        elif item.name in liste_balisesBlock:
+            log_debug(f"------ {item.name} est un tag bloc, on passe")
             break
-        else:
-            result.append(item.text)
+        else: # balise non "bloc", on boucle
+            log_debug(f"------ autre cas (inline?), on boucle")
+            #result.append(item.text)
+            result.append(extract_top_level_text(item))
     return ''.join(result)
 
 
@@ -332,6 +345,48 @@ def get_files(xml_content: ET.Element, dest_folder):
 
     return files_info_dict
 
+
+def download_image(href, dest_folder):
+    """Download image from a href link
+
+    Args:
+        href: img link
+        dest_folder (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    try:
+        # Télécharger l'image à partir du lien href
+        response = urllib.request.urlopen(href)
+        if response.status == 200:
+            # Lire le contenu de la réponse
+            image_data = response.read()
+            
+            # Générer un nom de fichier aléatoire pour éviter les conflits
+            random_id = generate_random_id()
+            filename = f"{random_id}_{os.path.basename(urlparse(href).path)}"
+            
+            # Enregistrer l'image dans le dossier de destination
+            with open(os.path.join(dest_folder, filename), 'wb') as f:
+                f.write(image_data)
+                
+            # Calculer le hash MD5 de l'image téléchargée
+            hash_md5 = hashlib.md5(image_data).hexdigest()
+            
+            # Obtenir le nom du fichier original et son extension
+            original_filename, file_extension = os.path.splitext(filename)
+            
+            # Retourner les informations sur l'image téléchargée
+            return "OK", filename, hash_md5, original_filename, file_extension
+        else:
+            # Retourner un état d'erreur si le téléchargement a échoué
+            return "NOK", f"Failed to download image from {href}", None, None, None
+    except Exception as e:
+        # Retourner un état d'erreur si une exception est levée lors du téléchargement
+        return "NOK", f"An error occurred while downloading image from {href}: {e}", None, None, None
+
+    
 
 def process_details_to_json(content: ET.Element, page_model: Model.Page, working_folder: str):
     """ Retrieves note details """
@@ -573,30 +628,29 @@ def process_table(table_content, page_model: Model.Page):
 
 
 def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
-    """Analyze the tags to transform the text formatting into AT JSON format. 
+    """Analyze inline tags to note text formatting in the json
 
     Args:
-        div_content (_type_): Contenu de la balise
-        div_id (_type_): id du bloc pour le json
-        page_model (Model.Page): modèle
+        div_content (_type_): Tag content
+        div_id (_type_): block id for json
+        page_model (Model.Page): Page model
     """
     # Définition des balises inline à traiter
-    formatting_tags = ['span', 'b', 'u', 'i', 's', 'a','font']
+    formatting_tags = ['span', 'b', 'u', 'i', 's', 'a','font', 'strong', 'em']
     div_text = extract_top_level_text(div_content)
+    log_debug(f"--- extract text and format ---", logging.NOTSET)
     
     if div_text:
         # Ajout du block text
-        log_debug(f"--- Extracting text", logging.DEBUG)
-        
+        log_debug(f"--- Add text to json : {div_text}", logging.DEBUG)
         page_model.add_text_to_block(div_id, text=div_text)
-        pass
         
+        # On récupère les tags avec pour chaque le début et fin
         for element in extract_tag_info(div_content, formatting_tags):
             start = element['start']
             end = element['end']
             tag_object=element['tag_object']
             tag_name = tag_object.name
-            #print(f"'tag_name': {tag_name}, 'text': {div_text}, 'start': {start}, 'end': {end}")
 
             formatting_type = None
             param = None
@@ -605,36 +659,48 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
             styles = extract_styles(text_style) if text_style else {}
             
             # Récup des infos
-            if ("font-weight" in styles and styles["font-weight"] == "bold") or tag_name == 'b':
+            if ("font-weight" in styles and styles["font-weight"] == "bold") or tag_name == 'b' or tag_name == 'strong':
                 formatting_type = "Bold"
-            elif ("text-decoration" in styles and styles["text-decoration"] == "underline") or tag_name == 'u':
+                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
+            if ("text-decoration" in styles and styles["text-decoration"] == "underline") or tag_name == 'u':
                 formatting_type = "Underscored"
-            elif ("font-style" in styles and styles["font-style"] == "italic") or tag_name == 'i':
+                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
+            if ("font-style" in styles and styles["font-style"] == "italic") or tag_name == 'i' or tag_name == 'em':
                 formatting_type = "Italic"
-            elif ("text-decoration" in styles and styles["text-decoration"] == "line-through") or tag_name == 's':
+                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
+            if ("text-decoration" in styles and styles["text-decoration"] == "line-through") or tag_name == 's':
                 formatting_type = "Strikethrough"
-            elif "color" in styles:
+                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
+            if "color" in styles:
                 formatting_type = "TextColor"
                 param = extract_color_from_style(styles["color"])
-            elif 'background-color' in styles:
+                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
+            if 'background-color' in styles:
                 formatting_type = "BackgroundColor"
                 param = extract_color_from_style(styles["background-color"])
-            elif tag_name == 'a':
+                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
+            if tag_name == 'a':
                 formatting_type = "Link"
                 param = tag_object.get('href')
-                
-            if param or formatting_type:
+                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
+
             
 
-def process_content_to_json(content: str, page_model, note_id, files_dict):
-    """Processing <content> to create the parent element and calling a function for child elements
+def process_content_to_json(content: str, page_model, note_id, files_dict, working_folder :str):
+    """Find <en-note> tag from content to create the parent element and calling a function for child elements
 
     Args:
-        content (str): _description_
-        page_model (_type_): objet Page généré pour cette note
-        note_id (_type_): id racine (pour rattachements fichiers, blocs, ...)
-        files_dict (_type_): Dictionnaire des fichiers dispo
+        content (str): content of <content< from source file
+        page_model (_type_): Page object generated for this note 
+        note_id (_type_): root id racine (used to link files, blocs, ... )
+        files_dict (_type_): Dictionnary of available files 
     """
     log_debug(f"- Converting content...", logging.DEBUG)
     # Converting to soup for specific html parsing
@@ -645,17 +711,23 @@ def process_content_to_json(content: str, page_model, note_id, files_dict):
     if root_block:
         block_id = note_id
         page_model.add_block(block_id,-1)
+        
+        # cas de texte avant les 1ères balises
         first_text = root_block.find_all(string=True, recursive=False)
+        log_debug(f"Text out of html tag {first_text}", logging.NOTSET)
         if first_text:
-            page_model.add_text_to_block(id,first_text[0].strip())
-
-        process_div_children(root_block, page_model, files_dict)
+            div_id = generate_random_id()
+            page_model.add_block(div_id,shifting=0)
+            page_model.add_text_to_block(div_id,first_text[0].strip())
+            
+        process_div_children(root_block, page_model, files_dict, working_folder)
+        
     else:
         log_debug(f"'en-note' element not find", logging.ERROR)
 
 
-def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
-    """_summary_
+def process_div_children(div, page_model: Model.Page, files_dict, working_folder :str):
+    """Process all child tag
 
     Args:
         div (_type_): _description_
@@ -664,20 +736,24 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
         table (bool, optional): Indicate if it's a loop for a table or the default treatment. Defaults to False.
     """
     log_debug(f"- Converting childrens...", logging.DEBUG)
-    # Définition des balises block à traiter
-    balisesBlock = ['div', 'hr', 'br', 'h1', 'h2', 'h3','en-media','table']
-    children = div.find_all(balisesBlock)
+    children = div.find_all(liste_balisesBlock)
+    cell_id=None
     for child in children:
+        log_debug(f"-------------------------", logging.NOTSET)
         # élément d'une table, on passe car tous les éléments sont à traiter dans la table (div, media, ...)
         if not cell_id and child.find_parent('td'):
-            continue;
-        # Traitement d'une cellule, l'ID est déjà défini
+            continue
+        # Traitement d'une cellule d'une table, l'ID est déjà défini
         if cell_id:
             div_id = cell_id
         else:
             div_id = generate_random_id()
         shifting_left = extract_shifting_left(child)
+        
         div_text = extract_top_level_text(child)
+        if div_text:
+            log_debug(f"Analyse texte top level pour : {child}", logging.NOTSET)
+            log_debug(f"texte top level extrait : {div_text}", logging.NOTSET)
 
         # On commence par les blocs sans texte
         if child.name == 'hr':
@@ -719,9 +795,32 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                 format = 'link' if style_attr and '--en-viewAs:attachment;' in style_attr else None
                 page_model.add_block(div_id, shifting=shifting_left, width = relative_width)
                 page_model.add_file_to_block(div_id, file_id = file_id, hash = hash, name = original_filename, file_type = file_type, mime = mime, size = file_size, format=format )
-
-                
-                
+        
+        # img avec source web
+        elif child.name == 'img':
+            # Exemple : <img style="--en-naturalWidth:1440; --en-naturalHeight:810;" height="476px" width="701px" src="https://www.exemple.com/truc/mon-image.jpg" />
+            # Récupération du lien
+            href = child.get('src')
+            log_debug(f"image à télécharger : {href}", logging.NOTSET)
+            download_image(href,working_folder)
+            # Fonction de téléchargement de l'image
+                # Elle doit 
+                    # déposer le fichier dans le sous-dossier files en ajoutant une chaine aléatoire devant (généré via generate_random_id())
+                    # retourner un état OK, le nom du fichier avec la chaine aléatoire (files\xxxxxxxxxmonfichier.jpg), le hash du fichier (hash_md5 = hashlib.md5(monfichier).hexdigest()), le nom du fichier d'origine avec l'extension et l'extension seule)
+                # Et si une erreur est rencontrée, retourner un état NOK et un message
+                    # Message = "Image non trouvée = " + lien si c'est une erreur web ou un autre message plus générique le cas échéant
+            
+            # On traite le résultat : 
+            #   # Si ok
+                    # Création du bloc avec page_model.add_block(div_id, shifting=shifting_left, width = relative_width)
+                    # Ajout des infos du fichier au bloc via page_model.add_file_to_block(div_id, file_id = file_id, hash = hash, name = original_filename, file_type = file_type, mime = mime, size = file_size, format=format )
+                    # Création du json correspondant au fichier, je le ferais moi-même
+                # Si plus dispo ou autre erreur web
+                    # Création du block avec page_model.add_block(div_id, shifting=shifting_left, width = relative_width)
+                    # Ajout du texte avec page_model.add_text_to_block(div_id, text=texte retourné par la fonction) 
+            
+        
+               
         # Traitement bloc code (div racine sans texte); "-en-codeblock:true" et "--en-codeblock:true" co-existent...
         elif child.name == 'div' and 'style' in child.attrs and '-en-codeblock:true' in child['style']:
                 process_codeblock(child, div_id, page_model)
@@ -735,7 +834,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
             if child.name == 'div' and parent_div and 'style' in parent_div.attrs and '-en-codeblock:true' in parent_div['style']:
                 pass
             # Traitements spécifiques
-            elif child.name in ['div', 'h1', 'h2', 'h3']:
+            else:
                 # Traitement spécifique pour les listes!
                 parent_list = child.find_parent(['ol', 'ul'])
                 if parent_list:
@@ -764,6 +863,7 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
 
                 # Et style si c'est une liste
                 if parent_list:
+                    log_debug(f"C'est une liste", logging.NOTSET)
                     if parent_list.name == 'ol':
                         style_liste = 'Numbered'
                     elif parent_list.name == 'ul' and parent_list.has_attr('style') and '--en-todo:true' in parent_list['style']:
@@ -776,8 +876,11 @@ def process_div_children(div, page_model: Model.Page, files_dict, cell_id=None):
                     page_model.edit_text_key(div_id,"style",style_liste)
                 
                 # et style des titres
+                parent_title = child.find_parent(['h1', 'h2', 'h3'])
                 if  child.name in ['h1', 'h2', 'h3']:
                     page_model.edit_text_key(div_id,"style","Header" + child.name[1:])
+                elif parent_title:
+                    page_model.edit_text_key(div_id,"style","Header" + parent_title.name[1:])
 
 
 def process_file_to_json(page_id :str, files_dict :dict[str, FileInfo], working_folder :str):
@@ -841,8 +944,10 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             root = ET.fromstring(file_content)
         except ET.ParseError as e:
             log_debug(f"XML parsing error : {e}", logging.ERROR)
+            continue
         except Exception as e:
             log_debug(f"XML treatment error : {e}", logging.ERROR)
+            continue
         
         # Parcours des notes dans le fichier
         for note_xml in root.iter("note"):
@@ -869,7 +974,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
                 continue
             
             content: str = content_element.text
-            process_content_to_json(content, page_model, note_id, files_dict)
+            process_content_to_json(content, page_model, note_id, files_dict, working_folder)
             
             # Processing xml tags (other than <content>)
             process_details_to_json(note_xml, page_model, working_folder)
