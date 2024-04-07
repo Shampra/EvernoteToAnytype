@@ -44,7 +44,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class FileInfo:
-    def __init__(self, file_id: str, unique_filename: str, original_filename: str, mime_type: str, file_size: int, file_type: str):
+    def __init__(self, file_id: str, unique_filename: str, original_filename: str, mime_type: str, file_size: int, file_type: str, hash_md5: str):
         """Gestion des infos d'un fichier
 
         Args:
@@ -53,6 +53,7 @@ class FileInfo:
             mime_type (str): mime
             file_size (int): taille
             file_type (str): type Anytype
+            hash_md5 (str): hash_md5 si pas présent ailleurs
         """
         self.file_id = file_id
         self.original_filename = original_filename
@@ -60,6 +61,7 @@ class FileInfo:
         self.mime_type = mime_type
         self.file_size = file_size
         self.file_type = file_type
+        self.hash_md5 = hash_md5
 
 def log_debug(message: str, level: int = logging.DEBUG):
     """Fonction de gestion des logs.
@@ -365,7 +367,7 @@ def get_files(xml_content: ET.Element, dest_folder):
                 outfile.write(data_decode)
             file_size = os.path.getsize(destination_path) * 8
 
-            files_info_dict[hash_md5] = FileInfo(file_id, unique_sanitized_filename, original_filename, mime, file_size, file_type)    
+            files_info_dict[hash_md5] = FileInfo(file_id, unique_sanitized_filename, original_filename, mime, file_size, file_type, hash_md5)    
         else:
             log_debug(f"--- Resource with empty element for one note", logging.DEBUG)
 
@@ -380,37 +382,62 @@ def download_image(href, dest_folder):
         dest_folder (_type_): _description_
 
     Returns:
-        _type_: _description_
+        False, String message d'erreur
+        True, FileInfo(file_id, unique_sanitized_filename, original_filename, mime_type=None, file_size=file_size, file_type="Image")
     """
+    # Fonction de téléchargement de l'image
+                # Elle doit 
+                    # déposer le fichier dans le sous-dossier files en ajoutant une chaine aléatoire devant (généré via generate_random_id())
+                    # retourner un état OK, le nom du fichier avec la chaine aléatoire (files\xxxxxxxxxmonfichier.jpg), le hash du fichier (hash_md5 = hashlib.md5(monfichier).hexdigest()), le nom du fichier d'origine avec l'extension et l'extension seule)
+                # Et si une erreur est rencontrée, retourner un état NOK et un message
+                    # Message = "Image non trouvée = " + lien si c'est une erreur web ou un autre message plus générique le cas échéant
+                    
     try:
         # Télécharger l'image à partir du lien href
-        response = urllib.request.urlopen(href)
+        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        req = urllib.request.Request(href,headers={'User-Agent': user_agent})
+        response = urllib.request.urlopen(req)
         if response.status == 200:
             # Lire le contenu de la réponse
             image_data = response.read()
             
-            # Générer un nom de fichier aléatoire pour éviter les conflits
-            random_id = generate_random_id()
-            filename = f"{random_id}_{os.path.basename(urlparse(href).path)}"
-            
-            # Enregistrer l'image dans le dossier de destination
-            with open(os.path.join(dest_folder, filename), 'wb') as f:
-                f.write(image_data)
-                
             # Calculer le hash MD5 de l'image téléchargée
             hash_md5 = hashlib.md5(image_data).hexdigest()
             
+            # Générer un nom de fichier aléatoire pour éviter les conflits
+            random_id = generate_random_id()
+            original_filename=os.path.basename(urlparse(href).path)
+            filename = f"{hash_md5}_{original_filename}"
+            
+            #id du fichier json
+            file_id :str = "file" + generate_random_id()
+            
             # Obtenir le nom du fichier original et son extension
-            original_filename, file_extension = os.path.splitext(filename)
+            file_extension = os.path.splitext(filename)[1]
+            sanitized_filename = sanitize_filename(original_filename)
+            unique_sanitized_filename = hash_md5 + sanitized_filename
+            
+            # Enregistrer l'image dans le dossier de destination
+            files_path = os.path.join(dest_folder, "files")
+            full_path = os.path.join(files_path, unique_sanitized_filename)
+            if not os.path.exists(files_path):
+                os.makedirs(files_path)
+            with open(full_path, 'wb') as outfile:
+                outfile.write(image_data)
+            file_size = os.path.getsize(full_path) * 8
+
+            
+            files_info_dict = FileInfo(file_id, unique_sanitized_filename, original_filename, mime_type=None, file_size=file_size, file_type="Image", hash_md5=hash_md5)    
+            
             
             # Retourner les informations sur l'image téléchargée
-            return "OK", filename, hash_md5, original_filename, file_extension
+            return True, files_info_dict
         else:
             # Retourner un état d'erreur si le téléchargement a échoué
-            return "NOK", f"Failed to download image from {href}", None, None, None
+            return False, f"Failed to download image from {href}"
     except Exception as e:
         # Retourner un état d'erreur si une exception est levée lors du téléchargement
-        return "NOK", f"An error occurred while downloading image from {href}: {e}", None, None, None
+        return False, f"An error occurred while downloading image from {href}: {e}"
 
     
 
@@ -709,7 +736,6 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
             if 'background-color' in styles:
                 formatting_type = "BackgroundColor"
                 param = extract_color_from_style(styles["background-color"])
-                log_debug(f"Ajout format {formatting_type if formatting_type else None} = {param} de {start} à {end} -- Couleur originelle : {styles["color"]}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             if tag_name == 'a':
                 formatting_type = "Link"
@@ -746,13 +772,13 @@ def process_content_to_json(content: str, page_model, note_id, files_dict, worki
             page_model.add_block(div_id,shifting=0)
             page_model.add_text_to_block(div_id,first_text[0].strip())
             
-        process_div_children(root_block, page_model, files_dict, working_folder)
+        process_div_children(root_block, page_model, note_id, files_dict, working_folder)
         
     else:
         log_debug(f"'en-note' element not find", logging.ERROR)
 
 
-def process_div_children(div, page_model: Model.Page, files_dict, working_folder :str):
+def process_div_children(div, page_model: Model.Page, note_id, files_dict, working_folder :str):
     """Process all child tag
 
     Args:
@@ -828,24 +854,44 @@ def process_div_children(div, page_model: Model.Page, files_dict, working_folder
             # Récupération du lien
             href = child.get('src')
             log_debug(f"image à télécharger : {href}", logging.NOTSET)
-            download_image(href,working_folder)
-            # Fonction de téléchargement de l'image
-                # Elle doit 
-                    # déposer le fichier dans le sous-dossier files en ajoutant une chaine aléatoire devant (généré via generate_random_id())
-                    # retourner un état OK, le nom du fichier avec la chaine aléatoire (files\xxxxxxxxxmonfichier.jpg), le hash du fichier (hash_md5 = hashlib.md5(monfichier).hexdigest()), le nom du fichier d'origine avec l'extension et l'extension seule)
-                # Et si une erreur est rencontrée, retourner un état NOK et un message
-                    # Message = "Image non trouvée = " + lien si c'est une erreur web ou un autre message plus générique le cas échéant
+            download_state, download_content = download_image(href,working_folder)
+            log_debug(f"{download_content}", logging.NOTSET)
             
-            # On traite le résultat : 
-            #   # Si ok
-                    # Création du bloc avec page_model.add_block(div_id, shifting=shifting_left, width = relative_width)
-                    # Ajout des infos du fichier au bloc via page_model.add_file_to_block(div_id, file_id = file_id, hash = hash, name = original_filename, file_type = file_type, mime = mime, size = file_size, format=format )
-                    # Création du json correspondant au fichier, je le ferais moi-même
-                # Si plus dispo ou autre erreur web
-                    # Création du block avec page_model.add_block(div_id, shifting=shifting_left, width = relative_width)
-                    # Ajout du texte avec page_model.add_text_to_block(div_id, text=texte retourné par la fonction) 
+            if download_state:
+                # Enregistrement du bloc
+                # Gestion redimensionnement
+                text_style = child.get('style')
+                styles = extract_styles(text_style) if text_style else {}
+                embed_width = child.get('width') # Redimension dans Evernote
+                original_width = styles.get("--en-naturalWidth") # Dimension naturelle de l'objet
+                relative_width = None  # Ratio de la version embed, la seule valeur utilisée dans Anytype
+                # On calcul, en mettant la valeur par défaut pour toutes les erreurs potentielles
+                try:
+                    embed_width_value = float(embed_width.replace("px", ""))
+                    original_width_value = float(original_width)
+                    embed_width_int = int(embed_width_value)
+                    original_width_int = int(original_width_value)
+                    if embed_width_int != 0:
+                        relative_width = embed_width_int / original_width_int
+                except Exception :
+                    relative_width = None
+                
+                page_model.add_block(div_id, shifting=shifting_left, width = relative_width)
+                page_model.add_file_to_block(div_id, file_id = download_content.file_id, hash = download_content.hash_md5, name = download_content.original_filename, 
+                                             file_type = download_content.file_type, mime = None, size = download_content.file_size, format="Image" )
+                
+                # Création du json du fichier
+                img_dict={} 
+                img_dict[download_content.hash_md5] = download_content
+                process_file_to_json(note_id,img_dict,working_folder)
+                
+                
+            else:
+                download_content:str
+                page_model.add_block(div_id, shifting=shifting_left)
+                page_model.add_text_to_block(div_id, text=download_content) 
+                log_debug(f"{download_content}", logging.WARNING)
             
-        
                
         # Traitement bloc code (div racine sans texte); "-en-codeblock:true" et "--en-codeblock:true" co-existent...
         elif child.name == 'div' and 'style' in child.attrs and '-en-codeblock:true' in child['style']:
