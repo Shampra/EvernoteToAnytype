@@ -164,14 +164,16 @@ def extract_tag_info(contenu_div, tags_list):
         start = len(soup_to_count.get_text())
         end = start + len(text)
 
-        log_debug(f"--- 'tag_name': {tag.name}, 'text': {text}, 'start': {start}, 'end': {end}, 'tag position' : {tag.sourcepos}", logging.NOTSET)
-        # Ajouter les informations de la balise à la liste
+        log_debug(f"--- 'tag_name': {tag.name}, 'text': {text}, 'start': {start}, 'end': {end}, 'tag position' : {tag.sourcepos}, 'tag_object' : {tag}", logging.NOTSET)
+
+        #Ajouter les informations de la balise à la liste
         tags_info.append({
             'tag_object': tag,
             'text': text,
             'start': start,
             'end': end
         })
+        
     return tags_info
 
 
@@ -689,7 +691,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
         page_model (Model.Page): Page model
     """
     # Définition des balises inline à traiter
-    formatting_tags = ['span', 'b', 'u', 'i', 's', 'a','font', 'strong', 'em']
+    formatting_tags = ['span', 'b', 'u', 'i', 's', 'a','font', 'strong', 'em', 'en-todo']
     div_text = extract_top_level_text(div_content)
     log_debug(f"--- extract text and format ---", logging.NOTSET)
     
@@ -742,8 +744,13 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
                 param = tag_object.get('href')
                 log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
-
-            
+            # cas de ces checkbox, en balise autofermante devant le texte!
+            if tag_name == 'en-todo' and 'checked' in tag_object.attrs: 
+                page_model.edit_text_key(div_id,"style",'Checkbox')
+                if 'true' in tag_object['checked']:
+                    page_model.edit_text_key(div_id,"checked",True)
+                else:
+                    page_model.edit_text_key(div_id,"checked",False)
 
 def process_content_to_json(content: str, page_model, note_id, files_dict, working_folder :str):
     """Find <en-note> tag from content to create the parent element and calling a function for child elements
@@ -812,7 +819,7 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
             page_model.add_block(div_id, shifting=shifting_left)
             page_model.edit_block_key(div_id, "div",{})
         elif child.name == 'br':
-            page_model.add_block(div_id, shifting=shifting_left, text = "")
+            page_model.add_block(div_id, shifting=shifting_left, text = "")           
         # Traitement des fichiers à intégrer
         elif child.name == 'en-media':
             hash = child.get('hash')
@@ -891,8 +898,7 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
                 page_model.add_block(div_id, shifting=shifting_left)
                 page_model.add_text_to_block(div_id, text=download_content) 
                 log_debug(f"{download_content}", logging.WARNING)
-            
-               
+
         # Traitement bloc code (div racine sans texte); "-en-codeblock:true" et "--en-codeblock:true" co-existent...
         elif child.name == 'div' and 'style' in child.attrs and '-en-codeblock:true' in child['style']:
                 process_codeblock(child, div_id, page_model)
@@ -946,6 +952,7 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
                     else:
                         style_liste = 'Marked'
                     page_model.edit_text_key(div_id,"style",style_liste)
+                
                 
                 # et style des titres
                 parent_title = child.find_parent(['h1', 'h2', 'h3'])
