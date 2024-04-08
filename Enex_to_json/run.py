@@ -3,7 +3,7 @@ import converter
 import gui
 
 """Version"""
-version="v0.8.4"
+version="v0.8.7"
 
 """Launch CLI if arguments provided, else GUI"""
 def main():
