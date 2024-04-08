@@ -191,7 +191,7 @@ def extract_styles(style_string):
         # Cas particuliers à gérer :
         ## href:https://example.com
         ## et les background:(...) url(&quot;data:image/svg+xml;base64,PHN2ZyB3(...)
-        style_pairs = re.findall(r'([^:]+):([^;]+);', style_string)
+        style_pairs = re.findall(r'([^:]+):([^;]+)', style_string)
         for key, value in style_pairs:
                 style_dict[key.strip()] = value.strip()
             
@@ -727,6 +727,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
 
             text_style = tag_object.get('style')
             styles = extract_styles(text_style) if text_style else {}
+            log_debug(f"Style extrait : {styles}")
             
             # Récup des infos
             if ("font-weight" in styles and styles["font-weight"] == "bold") or tag_name == 'b' or tag_name == 'strong':
@@ -745,10 +746,14 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
                 formatting_type = "Strikethrough"
                 log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
-            if "color" in styles:
+            if "color" in styles or tag_object.get('color'):
                 formatting_type = "TextColor"
-                param = extract_color_from_style(styles["color"])
-                log_debug(f"Ajout format {formatting_type if formatting_type else None} = {param} de {start} à {end} -- Couleur originelle : {styles["color"]}")
+                if "color" in styles:
+                    color_value = styles["color"]
+                else:
+                    color_value = tag_object.get("color")
+                param = extract_color_from_style(color_value)
+                log_debug(f"Ajout format {formatting_type if formatting_type else None} = {param} de {start} à {end} -- Couleur originelle : {color_value}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             if 'background-color' in styles:
                 formatting_type = "BackgroundColor"
