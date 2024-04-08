@@ -7,8 +7,9 @@ Enex to JSON converter, for export Evernote note to Anytype
 ### Build
 For packaged version :
 ```
+pip install -r requirements.txt
 pip install PyInstaller 
-pyinstaller main.py --additional-hooks-dir=.
+pyinstaller run.py --additional-hooks-dir=.  --add-data "models:models" --add-data "image.ico:."
 ```
 
 
