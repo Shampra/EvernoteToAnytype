@@ -30,7 +30,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
 # Déclarer options en tant que variable globale
 my_options = Options()
  # Définition des balises block 
-liste_balisesBlock = ['div', 'p', 'hr', 'br', 'h1', 'h2', 'h3','en-media','table', 'img','li']
+liste_balisesBlock = ['div', 'p', 'hr', 'br', 'h1', 'h2', 'h3','en-media','table', 'img','li', 'pre']
 
 
 # Configurer le logging
@@ -292,24 +292,24 @@ def extract_color_from_style(style):
 
 # Fonction pour extraire le texte de niveau supérieur sans garder le texte des sous-éléments
 def extract_top_level_text(element):
-    """Extract top level text without text inside childen tags
+    """Extract top level text without text inside childen block tags
 
     Returns:
         str: text
     """
     result = []
     for item in element.contents:
-        log_debug(f"extraction top level, item {item}")
         if isinstance(item, str): # sans balise
             result.append(item)
-            log_debug(f"------ chaine simple, on ajoute {item}")
+            log=f"-------- chaine simple, on ajoute {item}"
         elif item.name in liste_balisesBlock:
-            log_debug(f"------ {item.name} est un tag bloc, on passe")
+            log=f"-------- {item.name} est un tag bloc, on passe"
             break
         else: # balise non "bloc", on boucle
-            log_debug(f"------ autre cas (inline?), on boucle")
+            log = f"-------- autre cas (inline?), on boucle"
             #result.append(item.text)
             result.append(extract_top_level_text(item))
+        log_debug(f"--- extraction top level, item {item} ==> {log}", logging.NOTSET)
     return ''.join(result)
 
 
@@ -505,26 +505,41 @@ def process_details_to_json(content: ET.Element, page_model: Model.Page, working
     if tags_id_lists:
         page_model.edit_details_key("202312evernotetags",tags_id_lists)
 
+def extract_text_from_codeblock(content):
+    """Extrait le texte d'un codeblock : ajout de saut de ligne si besoin et nettoyage des balises
+
+    Args:
+        content (_type_): contenu html
+
+    Returns:
+        _type_: Chaine texte nettoyé
+    """
+    extracted_text = ""
+
+    for div_child in content.children:
+        # Traitement d'un bloc
+        if div_child.name:
+            # S'il a un un tag, on l'envoi en récursif pour le détailler
+            extracted_text += extract_text_from_codeblock(div_child) 
+            div_text=extract_top_level_text(div_child)
+            # Si c'est une balise type bloc avec du texte, on ajoute un saut de ligne à la fin
+            if div_text and div_child.name in liste_balisesBlock:
+                    extracted_text += "\n" 
+            
+        # Plus de balise, juste du texte : on l'ajoute
+        else:
+            extracted_text += div_child.string.rstrip()
+            
+    return extracted_text
 
 def process_codeblock(content, div_id, page_model: Model.Page):
-    """Process code block with all content including children div
+    """Process code block with all content including children tags
     
     Args:
         content (_type_): _description_
         page_model (Model.Page): _description_
     """
-    log_debug("Processing code block", logging.NOTSET)
-    extracted_text = ""
-    for div_child in content.find_all(['div', 'br']):
-        if div_child.name == 'br':  # Vérifie si le contenu de la div enfant est vide.
-            extracted_text += "\n"  # Remplacez le contenu par "\
-        elif not div_child.text.strip():
-            pass
-        else:
-            extracted_text += div_child.get_text()
-            # Sometimes EN add /n at the end of div/line, sometimes not...
-            if not extracted_text.endswith("\n"):
-                extracted_text += "\n"
+    extracted_text = extract_text_from_codeblock(content)
             
     # Estimation du type de langage
     text_language = None
@@ -810,9 +825,6 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
         shifting_left = extract_shifting_left(child)
         
         div_text = extract_top_level_text(child)
-        if div_text:
-            log_debug(f"Analyse texte top level pour : {child}", logging.NOTSET)
-            log_debug(f"texte top level extrait : {div_text}", logging.NOTSET)
 
         # On commence par les blocs sans texte
         if child.name == 'hr':
@@ -900,7 +912,7 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
                 log_debug(f"{download_content}", logging.WARNING)
 
         # Traitement bloc code (div racine sans texte); "-en-codeblock:true" et "--en-codeblock:true" co-existent...
-        elif child.name == 'div' and 'style' in child.attrs and '-en-codeblock:true' in child['style']:
+        elif (child.name == 'div' and 'style' in child.attrs and '-en-codeblock:true' in child['style']) or child.name=='pre':
                 process_codeblock(child, div_id, page_model)
         #Traitement table
         elif child.name == 'table':
@@ -909,7 +921,8 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
         elif div_text:
             # les div enfant des blocs codes doivent être exclues du traitement global
             parent_div = child.find_parent('div')
-            if child.name == 'div' and parent_div and 'style' in parent_div.attrs and '-en-codeblock:true' in parent_div['style']:
+            parent_pre = child.find_parent('pre')
+            if child.name == 'div' and ((parent_div and 'style' in parent_div.attrs and '-en-codeblock:true' in parent_div['style']) or parent_pre):
                 pass
             # Traitements spécifiques
             else:
