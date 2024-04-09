@@ -30,7 +30,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
 # Déclarer options en tant que variable globale
 my_options = Options()
  # Définition des balises block 
-liste_balisesBlock = ['div', 'p', 'hr', 'br', 'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','table', 'img','li', 'pre']
+liste_balisesBlock = ['div', 'p', 'hr',  'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','table', 'img','li', 'pre']
 
 
 # Configurer le logging
@@ -303,11 +303,13 @@ def extract_top_level_text(element):
             result.append(item)
             log=f"-------- chaine simple, on ajoute {item}"
         elif item.name in liste_balisesBlock:
-            log=f"-------- {item.name} est un tag bloc, on passe"
+            log=f"-------- {item.name} est une balise bloc, on passe"
             break
+        elif item.name=='br':# cas des br pour les sauts de ligne
+            result.append('\n')
+            log = f"-------- ajout saut de ligne"
         else: # balise non "bloc", on boucle
-            log = f"-------- autre cas (inline?), on boucle"
-            #result.append(item.text)
+            log = f"-------- autre cas (balise inline?), on boucle"
             result.append(extract_top_level_text(item))
         #log_debug(f"--- extraction top level, item {item} ==> {log}", logging.NOTSET)
     return ''.join(result)
@@ -792,13 +794,14 @@ def process_content_to_json(content: str, page_model, note_id, files_dict, worki
         block_id = note_id
         page_model.add_block(block_id,-1)
         
+        
         # cas de texte avant les 1ères balises
-        first_text = root_block.find_all(string=True, recursive=False)
-        log_debug(f"Text out of html tag {first_text}", logging.NOTSET)
-        if first_text:
+        div_text = extract_top_level_text(root_block)
+        if div_text:
+            log_debug(f"Text out of html block tag {div_text}", logging.NOTSET)
             div_id = generate_random_id()
             page_model.add_block(div_id,shifting=0)
-            page_model.add_text_to_block(div_id,first_text[0].strip())
+            extract_text_with_formatting(root_block, div_id, page_model)
             
         process_div_children(root_block, page_model, note_id, files_dict, working_folder)
         
