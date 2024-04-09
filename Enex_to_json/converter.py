@@ -148,29 +148,24 @@ def extract_tag_info(contenu_div, tags_list):
     """    
     # Analyser le contenu HTML   
     log_debug(f"Recherche des chaines mises en forme pour {contenu_div}", logging.NOTSET)
-    # Supprimer toutes les balises <br/> et les remplacer par des sauts de ligne \n
+    # Supprimer toutes les balises <br/> et les remplacer par des sauts de ligne \n, sinon problème de comptage
     for br_tag in contenu_div.find_all("br"):
         br_tag.replace_with("\n")
-        
     # On recréé un objet soup à partir de l'objet tag transmis
-    contenu_str = str(contenu_div)
     soup = BeautifulSoup(str(contenu_div), 'html.parser')
     
     # Initialiser une liste pour stocker les informations des balises
     tags_info = []
     
-    
+    # Extraire le texte brut de la page sans balises HTML
+    plain_text = soup.get_text()
 
     for tag in soup.find_all(tags_list):     
         text = tag.get_text()
-
-        # On compte le nombre de caractères du texte de contenu_div jusqu'à la position de la balise
-        content_to_count = contenu_str[0:tag.sourcepos]
-        soup_to_count = BeautifulSoup(content_to_count, 'html.parser')
-        start = len(soup_to_count.get_text())
+        start = plain_text.find(text)
         end = start + len(text)
 
-        log_debug(f"--- 'tag_name': {tag.name}, 'text': {text}, 'start': {start}, 'end': {end}, 'tag position' : {tag.sourcepos}, 'tag_object' : {tag}", logging.NOTSET)
+        log_debug(f"--- 'tag_name': {tag.name}, 'text': {text}, 'start': {start}, 'end': {end}, 'tag_object' : {tag}", logging.NOTSET)
 
         #Ajouter les informations de la balise à la liste
         tags_info.append({
