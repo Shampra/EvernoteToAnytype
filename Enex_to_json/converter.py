@@ -191,10 +191,10 @@ def extract_styles(style_string):
         # Cas particuliers à gérer :
         ## href:https://example.com
         ## et les background:(...) url(&quot;data:image/svg+xml;base64,PHN2ZyB3(...)
-        style_pairs = re.findall(r'([^:]+):([^;]+)', style_string)
+        style_pairs = re.findall(r'([^:]+):([^;]+);*', style_string)
         for key, value in style_pairs:
                 style_dict[key.strip()] = value.strip()
-            
+    print(style_dict)   
     return style_dict
 
 
