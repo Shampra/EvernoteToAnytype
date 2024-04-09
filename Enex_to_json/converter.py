@@ -30,7 +30,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
 # Déclarer options en tant que variable globale
 my_options = Options()
  # Définition des balises block 
-liste_balisesBlock = ['div', 'p', 'hr', 'br', 'h1', 'h2', 'h3','en-media','table', 'img','li', 'pre']
+liste_balisesBlock = ['div', 'p', 'hr', 'br', 'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','table', 'img','li', 'pre']
 
 
 # Configurer le logging
@@ -309,7 +309,7 @@ def extract_top_level_text(element):
             log = f"-------- autre cas (inline?), on boucle"
             #result.append(item.text)
             result.append(extract_top_level_text(item))
-        log_debug(f"--- extraction top level, item {item} ==> {log}", logging.NOTSET)
+        #log_debug(f"--- extraction top level, item {item} ==> {log}", logging.NOTSET)
     return ''.join(result)
 
 
@@ -692,9 +692,10 @@ def process_table(table_content, page_model: Model.Page):
                 index_columns+=1
         
             TEMP_nb_row+= 1
-    except:
-          log_debug('This table contains multiples rowspan/colspan that is not supported in this version.', logging.ERROR)
-          # TODO : cas des rowspans multiples...
+    except Exception as e:
+        log_debug(e, logging.ERROR)
+        log_debug('This table contains multiples rowspan/colspan that is not supported in this version.', logging.ERROR)
+        # TODO : cas des rowspans multiples...
 
 
 def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
@@ -978,6 +979,11 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
                     page_model.edit_text_key(div_id,"style","Header" + child.name[1:])
                 elif parent_title:
                     page_model.edit_text_key(div_id,"style","Header" + parent_title.name[1:])
+                
+                # Autres niveaux de titres, inexistants dans Anytype : on met en gras
+                if  child.name in ['h4', 'h5', 'h6'] :
+                    text_lenght = len(div_text)
+                    page_model.add_mark_to_text(div_id, 0, text_lenght, mark_type="Bold")
 
 
 def process_file_to_json(page_id :str, files_dict :dict[str, FileInfo], working_folder :str):
