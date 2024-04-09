@@ -148,12 +148,18 @@ def extract_tag_info(contenu_div, tags_list):
     """    
     # Analyser le contenu HTML   
     log_debug(f"Recherche des chaines mises en forme pour {contenu_div}", logging.NOTSET)
+    # Supprimer toutes les balises <br/> et les remplacer par des sauts de ligne \n
+    for br_tag in contenu_div.find_all("br"):
+        br_tag.replace_with("\n")
+        
     # On recréé un objet soup à partir de l'objet tag transmis
     contenu_str = str(contenu_div)
     soup = BeautifulSoup(str(contenu_div), 'html.parser')
     
     # Initialiser une liste pour stocker les informations des balises
     tags_info = []
+    
+    
 
     for tag in soup.find_all(tags_list):     
         text = tag.get_text()
@@ -709,9 +715,9 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
         page_model (Model.Page): Page model
     """
     # Définition des balises inline à traiter
+    log_debug(f"--- extract text and format ---", logging.NOTSET)
     formatting_tags = ['span', 'b', 'u', 'i', 's', 'a','font', 'strong', 'em', 'en-todo']
     div_text = extract_top_level_text(div_content)
-    log_debug(f"--- extract text and format ---", logging.NOTSET)
     
     if div_text:
         # Ajout du block text
@@ -786,7 +792,8 @@ def process_content_to_json(content: str, page_model, note_id, files_dict, worki
     """
     log_debug(f"- Converting content...", logging.DEBUG)
     # Converting to soup for specific html parsing
-    soup = BeautifulSoup(content, 'html.parser')  # Utilisation de l'analyseur HTML par défaut
+    cleaned_html = content.replace('\n', '').replace('\r', '') # suppression des sautes de lignes en dur
+    soup = BeautifulSoup(cleaned_html, 'html.parser')  # Utilisation de l'analyseur HTML par défaut
 
     # Créer l'élément JSON pour la première div (shifting = -1)
     root_block = soup.find('en-note')
