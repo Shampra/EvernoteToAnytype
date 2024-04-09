@@ -838,9 +838,7 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
         # On commence par les blocs sans texte
         if child.name == 'hr':
             page_model.add_block(div_id, shifting=shifting_left)
-            page_model.edit_block_key(div_id, "div",{})
-        elif child.name == 'br':
-            page_model.add_block(div_id, shifting=shifting_left, text = "")           
+            page_model.edit_block_key(div_id, "div",{})         
         # Traitement des fichiers à intégrer
         elif child.name == 'en-media':
             hash = child.get('hash')
