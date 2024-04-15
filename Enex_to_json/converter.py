@@ -946,20 +946,51 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
                         # On va traiter comme les blocs décalés...
                         shifting_left = 40 * (nested_level)
                 
-                # Puis on créé le bloc
-                page_model.add_block(div_id, shifting=shifting_left)
+
+                # Récupération styles du bloc
+                style = extract_styles(child.get('style'))
                 
-                # Traitement texte
+                # Traitement des embed avant de récupérer le texte formatté (donc les <a>)
+                if '--en-viewAs' in style and style['--en-viewAs'] != 'minimal':
+                    # Récupération du lien
+                    a_tag = child.find('a')
+                    if a_tag:
+                        href = a_tag.get("href")  
+                        if href:
+                            # Calcul ratio
+                            ratio = None
+                            if style['--en-viewAs'] == 'youtube-video-small':
+                                ratio = 0.33
+                            if style['--en-viewAs'] == 'youtube-video-large':
+                                ratio = 0.5
+                            log_debug(f"Embed size : {ratio} for original {style['--en-viewAs']}", logging.NOTSET)
+                            page_model.add_block(div_id, shifting=shifting_left, width=ratio)
+                            page_model.add_embed_to_block(div_id, url=href, processor="Youtube")
+                            continue # On arrête le traitement pour ce bloc 
+                        else:
+                            log_debug("Embed block without href in a tag", logging.WARNING)
+                    else:
+                        log_debug("Embed block without a tag", logging.WARNING)
+                    
+                    
+                    
+                    
+                    continue
+                    
+                # Sinon on créé le bloc simple et on traite le texte inline  
+                page_model.add_block(div_id, shifting=shifting_left)
                 extract_text_with_formatting(child, div_id, page_model)
                 
-                # Traitements styles du bloc
-                style = extract_styles(child.get('style'))
+                
                 if 'text-align' in style:
                     log_debug(f"Extraction style text_align : {style}",logging.NOTSET)
                     if style['text-align'] == 'center':
                         page_model.edit_block_key(div_id,"align","AlignCenter")
                     elif style['text-align'] == 'right':
                         page_model.edit_block_key(div_id,"align","AlignRight")
+                        
+
+                    
 
                 # Et style si c'est une liste
                 if parent_list:

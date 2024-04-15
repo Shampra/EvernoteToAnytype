@@ -177,6 +177,27 @@ class Page:
             print(
                 f"Erreur, block {block_id} inexistant lors de l'ajout de texte")
 
+    def add_embed_to_block(self, block_id, url=None, processor="Youtube"):
+        """Ajout d'un élément embed
+
+        Args:
+            block_id (str):
+            url (str, optional): embed url. Defaults to None.
+            processor (str, optional): Anytype processor. Defaults to "Youtube".
+        """
+        block = self.find_block_by_id(block_id)
+        if block:
+            # Si div en param, on ajouté (pour le cas hr)
+            if "latex" not in block:
+                block["latex"] = {}
+            if url is not None:
+                block["latex"]["text"] = url
+                block["latex"]["processor"] = processor
+        else:
+            print(
+                f"Erreur, bloc {block_id} inexistant lors de l'ajout de texte")
+            
+            
     def add_text_to_block(self, block_id, text=None, block_style=None, div=None):
         """Ajout d'une clé text au bon format
 
@@ -204,7 +225,7 @@ class Page:
                     block["text"]["marks"]["type"] = block_style
         else:
             print(
-                f"Erreur, block {block_id} inexistant lors de l'ajout de texte")
+                f"Erreur, bloc {block_id} inexistant lors de l'ajout de texte")
 
     def add_mark_to_text(self, block_id, start, end, mark_type=None, mark_param=None):
         block = self.find_block_by_id(block_id)
