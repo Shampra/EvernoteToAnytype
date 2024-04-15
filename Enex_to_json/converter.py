@@ -20,7 +20,7 @@ import urllib.request
 
 
 from models.language_patterns import language_patterns
-import models.mime, models.json_model as Model
+import models.table_parse, models.mime, models.json_model as Model
 from models.options import Options
 import warnings
 
