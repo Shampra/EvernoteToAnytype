@@ -1,35 +1,39 @@
 # Classe pour représenter un élément de tableau
+from bs4 import BeautifulSoup
+
 class TableElement(object):
-    def __init__(self, row, col, text, content=None,rowspan=1, colspan=1):
+    def __init__(self, row, col, tag,rowspan=1, colspan=1):
         self.row = row
         self.col = col
-        self.text = text
         self.rowspan = rowspan
         self.colspan = colspan
-        self.content = content  
+        self.tag = tag  
 
     def __repr__(self):
-        return f'''TableElement(row={self.row}, col={self.col}, text={self.text}, content={self.content}, rowspan={self.rowspan}, colspan={self.colspan})'''
+        return f'''TableElement(row={self.row}, col={self.col}, tag={self.tag}, rowspan={self.rowspan}, colspan={self.colspan})'''
+    
+    def getText(self):
+        if self.tag.text:
+            return self.tag.text.strip()
+        else:
+            return None
 
+    def getContent(self):
+        if self.tag and hasattr(self.tag, 'contents'):
+            return ''.join(map(str, self.tag.contents))
+        else:
+            return None
+        
     def hasRowspan(self):
         return self.rowspan > 1
 
     def hasColspan(self):
         return self.colspan > 1
 
-
 # Fonction pour analyser le HTML et créer une matrice d'éléments de tableau
-def parseTable(html_content) -> [[]]:
-    """Analyse le contenu HTML représentant un tableau et crée une matrice d'éléments de tableau.
-
-    Args:
-        html_content (str): Le contenu HTML du tableau.
-
-    Returns:
-        list of list of TableElement: Une matrice représentant le tableau, où chaque élément est un objet TableElement.
-    """
+def parseTable(html_content:BeautifulSoup) -> [[]]:
     # Analyse le HTML avec BeautifulSoup
-    soup = BeautifulSoup(html_content, 'html.parser')
+    soup = html_content
     # Sélectionne tous les éléments <tr>
     rows = soup.select('tr')
 
@@ -43,7 +47,8 @@ def parseTable(html_content) -> [[]]:
         # Parcourt chaque élément de la ligne
         for col_index, cell_tag in enumerate(cells):
             # Crée un objet TableElement pour représenter l'élément de tableau
-            element = TableElement(row_index, col_index, cell_tag.text.strip(),cell_tag.contents)
+            #element = TableElement(row_index, col_index, cell_tag.text.strip(),''.join(map(str, cell_tag.contents)))
+            element = TableElement(row_index, col_index,cell_tag ) # cell_tag.text.strip(),''.join(map(str, cell_tag.contents))
             # Vérifie s'il y a des attributs rowspan ou colspan et les assigne à l'élément
             if cell_tag.has_attr('rowspan'):
                 element.rowspan = int(cell_tag['rowspan'])
@@ -54,16 +59,16 @@ def parseTable(html_content) -> [[]]:
 
     # Fonction pour résoudre les éléments avec colspan
     def solveColspan(table_element):
-        row, col, text, content, rowspan, colspan = table_element.row, table_element.col, table_element.text, table_element.content, table_element.rowspan, table_element.colspan
-        table_matrix[row].insert(col + 1, TableElement(row, col, text, content,rowspan, colspan - 1))
+        row, col, tag, rowspan, colspan = table_element.row, table_element.col, table_element.tag, table_element.rowspan, table_element.colspan
+        table_matrix[row].insert(col + 1, TableElement(row, col, tag,rowspan, colspan - 1))
         for column in range(col + 1, len(table_matrix[row])):
             table_matrix[row][column].col += 1
 
     # Fonction pour résoudre les éléments avec rowspan
     def solveRowspan(table_element):
-        row, col, text, content, rowspan, colspan = table_element.row, table_element.col, table_element.text, table_element.content, table_element.rowspan, table_element.colspan
+        row, col, tag, rowspan, colspan = table_element.row, table_element.col, table_element.tag, table_element.rowspan, table_element.colspan
         offset = row + 1
-        table_matrix[offset].insert(col, TableElement(offset, col, text, content,rowspan - 1, 1))
+        table_matrix[offset].insert(col, TableElement(offset, col, tag, rowspan - 1, 1))
         for column in range(col + 1, len(table_matrix[offset])):
             table_matrix[offset][column].col += 1
 

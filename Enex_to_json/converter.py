@@ -564,6 +564,93 @@ def process_codeblock(content, div_id, page_model: Model.Page):
     
     pass
 
+def process_tableV2(table_content, page_model: Model.Page):
+    log_debug(f"- Traitement table...", logging.DEBUG)
+    # Création d'une matrice de la table
+    try:
+        table_matrix = models.table_parse.parseTable(table_content)
+    except Exception as ex:
+        log_debug(f"- Erreur lors du traitement de la table : {ex}", logging.ERROR)
+        return
+    
+    
+    # Création bloc table
+    table_id = generate_random_id()
+    page_model.add_block(table_id, shifting=extract_shifting_left(table_content))
+    page_model.edit_block_key(table_id, "table", {})
+    
+    # Création bloc liste colonnes et génération des ID des lignes
+    columns_list_id = generate_random_id()
+    column_ids = [generate_random_id() for _ in range(len(table_matrix[0]))]
+    
+    page_model.add_block(columns_list_id)
+    page_model.edit_block_key(columns_list_id, "style", "TableColumns", master_key="layout")
+    # Ajout de l'id du "bloc liste colonnes" aux enfants du bloc table
+    page_model.add_children_id(table_id,columns_list_id)
+    
+    ########### TODO : style des colonnes -> 
+    # Soit à récup sur le style du td "width:33.441208198489754%"
+    # 
+    # Soit à récup sur les col (donc à retravailler)
+    # table_content.findall('col')...
+    ########### 
+    
+    # Création bloc liste lignes
+    rows_list_id = generate_random_id()
+    row_ids = [generate_random_id() for _ in range(len(table_matrix))]
+    page_model.add_block(rows_list_id)
+    page_model.edit_block_key(rows_list_id, "style", "TableRows", master_key="layout")
+    # Ajout de l'id du "bloc liste colonnes" aux enfants du bloc table
+    page_model.add_children_id(table_id,rows_list_id)
+    
+    
+    # Création des colonnes (avec élément tableColumn et la largeur)
+    for col_index, col_id in enumerate(column_ids):
+        # TODO width; et style?
+        col_width = None
+        page_model.add_children_id(columns_list_id,col_id)
+        page_model.add_block(col_id, shifting=None, width=col_width)
+        page_model.edit_block_key(col_id,"tableColumn",{})
+        log_debug(f"Colonne {col_id}", logging.NOTSET)
+        
+        
+    
+    # Création des lignes (avec élément tableRow et cellules dans childrenIds)
+    ## TODO ajout de isHeader:true si détecté/détectable dans le enex
+    for row_index, row_id in enumerate(row_ids):
+        page_model.add_children_id(rows_list_id,row_id)
+        page_model.add_block(row_id, shifting=None)
+        page_model.edit_block_key(row_id,"tableRow",{})
+        log_debug(f"Ligne {row_id}", logging.NOTSET)
+        
+        # TODO : récupération du style
+        
+        # Création des cellules de la ligne, avec gestion du contenu (mise en forme et image)
+        for col_index, element in enumerate(table_matrix[row_index]):
+            cell_id = f"{row_id}-{column_ids[col_index]}"
+            page_model.add_block(cell_id, shifting=None, text="")
+            page_model.add_children_id(row_id,cell_id)
+            log_debug(f"Cellule {cell_id}", logging.NOTSET)
+
+            # Trouver les balises de type bloc et les traiter, puisque AT ne gère pas de bloc dans un tableau...
+            # div,p : saut de ligne
+            # hr : on vire
+            # h1/2/3... : gras
+            # en-media et img / li / pre : à traiter quand AT les gèrera
+            # ['div', 'p', 'hr',  'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','table', 'img','li', 'pre']
+            # En attendant une fonction qui fait ça bien....
+            log_debug(f"Contenu {element}", logging.NOTSET)
+            cleaned_cell = element.tag
+            for tag in cleaned_cell.find_all(['div', 'ol', 'ul', 'li']):
+                if tag.name == "li":
+                    tag.insert_before('\n')
+                tag.unwrap()
+            for br in cleaned_cell.find_all('br'):
+                br.replace_with('\n')
+            extract_text_with_formatting(cleaned_cell, cell_id, page_model)
+
+    
+
 
 def process_table(table_content, page_model: Model.Page):
     # Crée un ID pour la table, la liste des colonnes et la liste des lignes et créé les blocs
@@ -776,6 +863,13 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
                 else:
                     page_model.edit_text_key(div_id,"checked",False)
 
+# Créer un traitement des blocs, pour traitement via process_div_chidren ou process_table
+# TODO : dans process_div_chidren, traiter sauf si parent('table') tout simplement
+def process_block_elt():
+    
+    pass
+
+
 def process_content_to_json(content: str, page_model, note_id, files_dict, working_folder :str):
     """Find <en-note> tag from content to create the parent element and calling a function for child elements
 
@@ -824,7 +918,7 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
     children = div.find_all(liste_balisesBlock)
     cell_id=None
     for child in children:
-        log_debug(f"-------------------------", logging.NOTSET)
+        log_debug(f"------------------------- Traitement {child.name}", logging.NOTSET)
         # élément d'une table, on passe car tous les éléments sont à traiter dans la table (div, media, ...)
         if not cell_id and child.find_parent('td'):
             continue
@@ -843,6 +937,7 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
             page_model.edit_block_key(div_id, "div",{})         
         # Traitement des fichiers à intégrer
         elif child.name == 'en-media':
+            log_debug(f"Ajout en-media", logging.NOTSET)
             hash = child.get('hash')
             if hash in files_dict:
                 file_info :FileInfo = files_dict[hash]
@@ -925,7 +1020,8 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
                 process_codeblock(child, div_id, page_model)
         #Traitement table
         elif child.name == 'table':
-            process_table(child, page_model)
+            #process_table(child, page_model)
+            process_tableV2(child, page_model)
         # Traitement des blocs demandant du contenu texte
         elif div_text:
             # les div enfant des blocs codes doivent être exclues du traitement global
