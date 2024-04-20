@@ -1,4 +1,5 @@
 import argparse
+import copy
 import shutil
 from bs4 import BeautifulSoup
 import json
@@ -31,7 +32,8 @@ warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
 my_options = Options()
  # Définition des balises block 
 liste_balisesBlock = ['div', 'p', 'hr',  'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','table', 'img','li', 'pre']
-
+# Liste globale des fichiers de la note
+files_dict = []
 
 # Configurer le logging
 logging.basicConfig(
@@ -62,6 +64,7 @@ class FileInfo:
         self.file_size = file_size
         self.file_type = file_type
         self.hash_md5 = hash_md5
+
 
 def log_debug(message: str, level: int = logging.DEBUG):
     """Fonction de gestion des logs.
@@ -195,7 +198,6 @@ def extract_styles(style_string):
         style_pairs = re.findall(r'([^:]+):([^;]+);*', style_string)
         for key, value in style_pairs:
                 style_dict[key.strip()] = value.strip()
-    print(style_dict)   
     return style_dict
 
 
@@ -291,7 +293,7 @@ def extract_color_from_style(style):
         return default_color  # Format non reconnu, rouge mis par défaut
 
 
-# Fonction pour extraire le texte de niveau supérieur sans garder le texte des sous-éléments
+# Fonction pour extraire le texte de niveau supérieur sans garder le texte des sous blocs
 def extract_top_level_text(element):
     """Extract top level text without text inside childen block tags
 
@@ -519,7 +521,7 @@ def extract_text_from_codeblock(content):
     """
     extracted_text = ""
 
-    for div_child in content.children:
+    for div_child in content. children:
         # Traitement d'un bloc
         if div_child.name:
             # S'il a un un tag, on l'envoi en récursif pour le détailler
@@ -587,14 +589,7 @@ def process_tableV2(table_content, page_model: Model.Page):
     page_model.edit_block_key(columns_list_id, "style", "TableColumns", master_key="layout")
     # Ajout de l'id du "bloc liste colonnes" aux enfants du bloc table
     page_model.add_children_id(table_id,columns_list_id)
-    
-    ########### TODO : style des colonnes -> 
-    # Soit à récup sur le style du td "width:33.441208198489754%"
-    # 
-    # Soit à récup sur les col (donc à retravailler)
-    # table_content.findall('col')...
-    ########### 
-    
+
     # Création bloc liste lignes
     rows_list_id = generate_random_id()
     row_ids = [generate_random_id() for _ in range(len(table_matrix))]
@@ -603,25 +598,37 @@ def process_tableV2(table_content, page_model: Model.Page):
     # Ajout de l'id du "bloc liste colonnes" aux enfants du bloc table
     page_model.add_children_id(table_id,rows_list_id)
     
-    
+    # Récup col
+    col_list = table_content.find_all('col')
+
     # Création des colonnes (avec élément tableColumn et la largeur)
     for col_index, col_id in enumerate(column_ids):
         # TODO width; et style?
         col_width = None
+        # width
+        if col_list:
+            current_col = col_list[col_index]
+            col_style = current_col.get('style')
+            styles = extract_styles(col_style) if col_style else {}
+            col_width_px = styles.get("width", None)
+            col_width = int(col_width_px.replace("px", "")) if col_width_px else None 
+        else: # largeur sur td... si c'est en px sinon on ignore
+            col_style = table_matrix[0][col_index].tag.get('style')
+            styles = extract_styles(col_style) if col_style else {}
+            col_width_px = styles.get("width", None)
+            if 'px' in col_width_px: #Si pas px, c'est % et difficiule à appliquer sur AT 
+                col_width = int(col_width_px.replace("px", "")) if col_width_px else None 
+        
         page_model.add_children_id(columns_list_id,col_id)
         page_model.add_block(col_id, shifting=None, width=col_width)
         page_model.edit_block_key(col_id,"tableColumn",{})
-        log_debug(f"Colonne {col_id}", logging.NOTSET)
         
-        
-    
     # Création des lignes (avec élément tableRow et cellules dans childrenIds)
     ## TODO ajout de isHeader:true si détecté/détectable dans le enex
     for row_index, row_id in enumerate(row_ids):
         page_model.add_children_id(rows_list_id,row_id)
         page_model.add_block(row_id, shifting=None)
         page_model.edit_block_key(row_id,"tableRow",{})
-        log_debug(f"Ligne {row_id}", logging.NOTSET)
         
         # TODO : récupération du style
         
@@ -630,163 +637,91 @@ def process_tableV2(table_content, page_model: Model.Page):
             cell_id = f"{row_id}-{column_ids[col_index]}"
             page_model.add_block(cell_id, shifting=None, text="")
             page_model.add_children_id(row_id,cell_id)
-            log_debug(f"Cellule {cell_id}", logging.NOTSET)
+            
+            # Style cellule
+            styles = extract_styles(element.tag.get('style'))
+                
+            # Récup des infos
+            if "vertical-align" in styles and styles["vertical-align"] == "middle":
+                page_model.edit_block_key(cell_id,"verticalAlign","VerticalAlignMiddle")
+            if "color" in styles:
+                param = extract_color_from_style(styles["color"])
+                page_model.edit_text_key(cell_id,"color",param)
+            if 'background-color' in styles:
+                param = extract_color_from_style(styles["background-color"])
+                page_model.edit_block_key(cell_id,"backgroundColor",param)
 
             # Trouver les balises de type bloc et les traiter, puisque AT ne gère pas de bloc dans un tableau...
             # div,p : saut de ligne
             # hr : on vire
             # h1/2/3... : gras
             # en-media et img / li / pre : à traiter quand AT les gèrera
+            # Li : à traiter ?
             # ['div', 'p', 'hr',  'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','table', 'img','li', 'pre']
-            # En attendant une fonction qui fait ça bien....
-            log_debug(f"Contenu {element}", logging.NOTSET)
-            cleaned_cell = element.tag
-            for tag in cleaned_cell.find_all(['div', 'ol', 'ul', 'li']):
-                if tag.name == "li":
-                    tag.insert_before('\n')
-                tag.unwrap()
+            cleaned_cell = copy.copy(element.tag) # attention à copier, on ne modifie pas l'objet d'origine!
+            
+            elt_in_cell = cleaned_cell.find_all(['div', 'p', 'hr',  'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','img','li', 'pre', 'en-todo'])
+            for tag in elt_in_cell:
+                has_text =  bool(extract_top_level_text(tag).strip())
+                if tag.name == "li" or tag.name == 'en-todo':
+                    if len([tag for tag in elt_in_cell if tag.name in ['en-todo', 'li']]) == 1 : 
+                        parent_list = tag.find_parent(['ol', 'ul'])
+                        if parent_list:
+                            if parent_list.name == 'ol':
+                                style_liste = 'Numbered'
+                            if parent_list.name == 'ul' and parent_list.has_attr('style') and '--en-todo:true' in parent_list['style']:
+                                style_liste = 'Checkbox'
+                                if tag.has_attr('style') and '--en-checked:true' in tag['style']:
+                                    page_model.edit_text_key(cell_id,"checked",True)
+                            else:
+                                style_liste = 'Marked'
+                            page_model.edit_text_key(cell_id,"style",style_liste)
+                        elif tag.name == 'en-todo' and 'checked' in tag.attrs: 
+                            page_model.edit_text_key(cell_id,"style",'Checkbox')
+                            if 'true' in tag['checked']:
+                                page_model.edit_text_key(cell_id,"checked",True)
+                            else:
+                                page_model.edit_text_key(cell_id,"checked",False)
+                    else: # Plusieurs blocs, impossible dans AT, on converti en texte
+                        parent_list = tag.find_parent(['ol', 'ul'])
+                        if parent_list:
+                            if parent_list.name == 'ol':
+                                tag.insert_before('-')
+                            if parent_list.name == 'ul' and parent_list.has_attr('style') and '--en-todo:true' in parent_list['style']:
+                                if tag.has_attr('style') and '--en-checked:true' in tag['style']:
+                                    tag.insert_before('[X]')
+                                else:
+                                    tag.insert_before('[ ]')
+                            else:
+                                tag.insert_before('-')
+                        # checkbox inline, qui ne peux être converti en tant que tel
+                        elif tag.name == 'en-todo' and 'checked' in tag.attrs: 
+                            if 'true' in tag['checked']:
+                                tag.insert_before('[X]')
+                            else:
+                                tag.insert_before('[ ]')    
+                    if tag.name == 'li' and has_text: # pas de saut de ligne à faire sur un en-todo
+                        tag.insert_after('\n')   
+                elif tag.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:  
+                    page_model.edit_text_key(cell_id,"style","Header" + tag.name[1:])
+                elif tag.name in ["en-media"]:
+                    process_media(tag, page_model, shifting=None, cell_id=cell_id)
+                elif tag.name == 'div':
+                    # On note aussi le style
+                    style = extract_styles(tag.get('style'))
+                    if 'text-align' in style:
+                        if style['text-align'] == 'center':
+                            page_model.edit_block_key(cell_id,"align","AlignCenter")
+                        elif style['text-align'] == 'right':
+                            page_model.edit_block_key(cell_id,"align","AlignRight")
+                    if has_text:
+                        tag.insert_after('\n')
+                tag.unwrap() 
+                
             for br in cleaned_cell.find_all('br'):
                 br.replace_with('\n')
             extract_text_with_formatting(cleaned_cell, cell_id, page_model)
-
     
-
-
-def process_table(table_content, page_model: Model.Page):
-    # Crée un ID pour la table, la liste des colonnes et la liste des lignes et créé les blocs
-    table_id = generate_random_id()
-    page_model.add_block(table_id, shifting=extract_shifting_left(table_content))
-    page_model.edit_block_key(table_id, "table", {})
-    
-    columns_list_id = generate_random_id()
-    page_model.add_block(columns_list_id)
-    page_model.edit_block_key(columns_list_id, "style", "TableColumns", master_key="layout")
-    page_model.add_children_id(table_id,columns_list_id)
-    
-    rows_list_id = generate_random_id()
-    page_model.add_block(rows_list_id)
-    page_model.edit_block_key(rows_list_id, "style", "TableRows", master_key="layout")
-    page_model.add_children_id(table_id,rows_list_id)
-
-    # Variables pour stocker les IDs des colonnes et des lignes
-    columns_ids = []
-    rows_ids = []
-
-    try:
-        # Récupération des colonnes
-        colgroup = table_content.find('colgroup')
-        if colgroup:
-            cols = colgroup.find_all('col')
-            for col in cols:
-                col_id = generate_random_id()
-                columns_ids.append(col_id)
-                page_model.add_children_id(columns_list_id,col_id)
-                # Récupération largeur
-                col_style = col.get('style')
-                styles = extract_styles(col_style) if col_style else {}
-                col_width_px = styles.get("width", None)
-                col_width = int(col_width_px.replace("px", "")) if col_width_px else None
-                # Crée un bloc pour chaque colonne
-                page_model.add_block(col_id, shifting=None, width=col_width)
-                page_model.edit_block_key(col_id,"tableColumn",{})
-
-        # Récupération des lignes
-        rows = table_content.find_all('tr')
-        
-        # il faut gérer les rowspan, on va stocker temporairement à chaque ligne les "futures" valeurs de la ligne suivantes
-        cells_for_future_row: List[str] = []
-        TEMP_nb_row = 0
-        for row in rows:
-            row_id = generate_random_id()
-            rows_ids.append(row_id)
-            # Ajout ligne dans la liste des lignes
-            page_model.add_children_id(rows_list_id, row_id)
-            # Création bloc ligne
-            page_model.add_block(row_id, shifting=None)
-            page_model.edit_block_key(row_id,"tableRow",{})
-            
-            # On doit traiter la liste des colonnes pour cette nouvelle ligne
-            columns_ids_todo = columns_ids.copy()
-            
-            # Si on a des cellules récupérés (rowspan), on les gère
-            if cells_for_future_row:
-                for id in cells_for_future_row:
-                    cell_id = f"{row_id}-{id}"
-                    page_model.add_block(cell_id, shifting=None, text="")
-                    page_model.add_children_id(row_id,cell_id)
-                    # puis on retire cette colonne de la liste des colonnes à traiter
-                    columns_ids_todo.remove(id)
-                cells_for_future_row.clear()
-
-            tds = row.find_all('td')
-            # Puis parcours des cellules de la ligne
-            index_columns = 0
-            for td in tds:
-                col = columns_ids_todo[index_columns]
-                cell_id = f"{row_id}-{col}"
-                # Ajout de la cellule dans le bloc de la ligne
-                page_model.add_children_id(row_id,cell_id)
-                page_model.add_block(cell_id, shifting=None, text="")
-                
-                # Traitement contenu de la cellule
-                # TODO : voir pour mutualiser avec process_div_children()
-                # Il faudrait aussi "mutualiser" les div ou autres : dans AT, il n'y a qu'un bloc
-                # Impact sur la longueur du texte, sur ce que récupérer (style sur div, etc)
-                # Pour l'instant, on récupère le style de la 1ère div
-                first_child = td.find('div')
-                style = extract_styles(first_child.get('style'))
-                if 'text-align' in style:
-                    if style['text-align'] == 'center':
-                        page_model.edit_block_key(cell_id,"align","AlignCenter")
-                    elif style['text-align'] == 'right':
-                        page_model.edit_block_key(cell_id,"align","AlignRight")
-                        
-                # Puis on supprime les notions de div et on traite l'ensemble 
-                cleaned_td = td
-                for tag in cleaned_td.find_all(['div', 'ol', 'ul', 'li']):
-                    if tag.name == "li":
-                        tag.insert_before('\n')
-                    tag.unwrap()
-                for br in td.find_all('br'):
-                    br.replace_with('\n')
-                extract_text_with_formatting(cleaned_td, cell_id, page_model)
-                
-                # récupération style sur td
-                styles = extract_styles(td.get('style'))
-                
-                # Récup des infos
-                if "vertical-align" in styles and styles["vertical-align"] == "middle":
-                    page_model.edit_block_key(cell_id,"verticalAlign","VerticalAlignMiddle")
-                if "color" in styles:
-                    param = extract_color_from_style(styles["color"])
-                    page_model.edit_text_key(cell_id,"color",param)
-                if 'background-color' in styles:
-                    param = extract_color_from_style(styles["background-color"])
-                    page_model.edit_block_key(cell_id,"backgroundColor",param)
-
-                # Gère les cellules fusionnées
-                colspan = int(td.get('colspan', 1))
-                if colspan > 1:
-                    for _ in range(colspan - 1):
-                        index_columns+=1
-                        next_col = columns_ids_todo[index_columns]  # Avance dans les colonnes
-                        cell_id = f"{row_id}-{next_col}"
-                        page_model.add_block(cell_id, shifting=None, text="")
-                        page_model.add_children_id(row_id,cell_id)
-                
-                rowspan = int(td.get('rowspan', 1))
-                if rowspan > 1:
-                    for _ in range(rowspan - 1):
-                        cells_for_future_row.append(col)
-                        
-                index_columns+=1
-        
-            TEMP_nb_row+= 1
-    except Exception as e:
-        log_debug(e, logging.ERROR)
-        log_debug('This table contains multiples rowspan/colspan that is not supported in this version.', logging.ERROR)
-        # TODO : cas des rowspans multiples...
-
 
 def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
     """Analyze inline tags to note text formatting in the json
@@ -823,19 +758,19 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
             # Récup des infos
             if ("font-weight" in styles and styles["font-weight"] == "bold") or tag_name == 'b' or tag_name == 'strong':
                 formatting_type = "Bold"
-                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                #log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             if ("text-decoration" in styles and styles["text-decoration"] == "underline") or tag_name == 'u':
                 formatting_type = "Underscored"
-                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                #log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             if ("font-style" in styles and styles["font-style"] == "italic") or tag_name == 'i' or tag_name == 'em':
                 formatting_type = "Italic"
-                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                #log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             if ("text-decoration" in styles and styles["text-decoration"] == "line-through") or tag_name == 's':
                 formatting_type = "Strikethrough"
-                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                #log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             if "color" in styles or tag_object.get('color'):
                 formatting_type = "TextColor"
@@ -844,7 +779,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
                 else:
                     color_value = tag_object.get("color")
                 param = extract_color_from_style(color_value)
-                log_debug(f"Ajout format {formatting_type if formatting_type else None} = {param} de {start} à {end} -- Couleur originelle : {color_value}")
+                #log_debug(f"Ajout format {formatting_type if formatting_type else None} = {param} de {start} à {end} -- Couleur originelle : {color_value}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             if 'background-color' in styles:
                 formatting_type = "BackgroundColor"
@@ -853,7 +788,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
             if tag_name == 'a':
                 formatting_type = "Link"
                 param = tag_object.get('href')
-                log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
+                #log_debug(f"Ajout format {formatting_type if formatting_type else None} de {start} à {end}")
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             # cas de ces checkbox, en balise autofermante devant le texte!
             if tag_name == 'en-todo' and 'checked' in tag_object.attrs: 
@@ -863,14 +798,49 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
                 else:
                     page_model.edit_text_key(div_id,"checked",False)
 
-# Créer un traitement des blocs, pour traitement via process_div_chidren ou process_table
-# TODO : dans process_div_chidren, traiter sauf si parent('table') tout simplement
-def process_block_elt():
-    
-    pass
 
+def process_media(elt, page_model: Model.Page, shifting=None, cell_id=None):
+    log_debug(f"Ajout en-media", logging.NOTSET)
+    hash = elt.get('hash')
+    if hash in files_dict:
+        file_info :FileInfo = files_dict[hash]
+        file_id = file_info.file_id
+        original_filename = file_info.original_filename
+        mime = file_info.mime_type
+        file_size = file_info.file_size
+        file_type = file_info.file_type
+        # Redimensionné? Il faut retourner width="340px" divisé par style="--en-naturalWidth:1280" ; ex : style="--en-naturalWidth:1280; --en-naturalHeight:512;" width="340px" />
+        text_style = elt.get('style')
+        styles = extract_styles(text_style) if text_style else {}
+                
+        embed_width = elt.get('width') # Redimension dans Evernote
+        original_width = styles.get("--en-naturalWidth") # Dimension naturelle de l'objet
+        relative_width = None  # Ratio de la version embed, la seule valeur utilisée dans Anytype
+        # On calcul, en mettant la valeur par défaut pour toutes les erreurs potentielles
+        try:
+            embed_width_value = float(embed_width.replace("px", ""))
+            original_width_value = float(original_width)
+            embed_width_int = int(embed_width_value)
+            original_width_int = int(original_width_value)
+            if embed_width_int != 0:
+                relative_width = embed_width_int / original_width_int
+        except Exception :
+            relative_width = None
+                
+        # Format lien? 
+        style_attr = elt.get('style')
+        format = 'link' if style_attr and '--en-viewAs:attachment;' in style_attr else None
+        
+        if cell_id: # tableau : l'image sera le contenu possible du block-cellule
+            page_model.add_file_to_block(cell_id, file_id = file_id, hash = hash, name = original_filename, file_type = file_type, mime = mime, size = file_size, format=format )
+        else: # Sinon c'est l'arborescende de bloc de la page
+            block_id = generate_random_id()
+            page_model.add_block(block_id, shifting=shifting, width = relative_width)
+            page_model.add_file_to_block(block_id, file_id = file_id, hash = hash, name = original_filename, file_type = file_type, mime = mime, size = file_size, format=format )
+        
+        
 
-def process_content_to_json(content: str, page_model, note_id, files_dict, working_folder :str):
+def process_content_to_json(content: str, page_model, note_id, working_folder :str):
     """Find <en-note> tag from content to create the parent element and calling a function for child elements
 
     Args:
@@ -899,13 +869,13 @@ def process_content_to_json(content: str, page_model, note_id, files_dict, worki
             page_model.add_block(div_id,shifting=0)
             extract_text_with_formatting(root_block, div_id, page_model)
             
-        process_div_children(root_block, page_model, note_id, files_dict, working_folder)
+        process_div_children(root_block, page_model, note_id, working_folder)
         
     else:
         log_debug(f"'en-note' element not find", logging.ERROR)
 
 
-def process_div_children(div, page_model: Model.Page, note_id, files_dict, working_folder :str):
+def process_div_children(div, page_model: Model.Page, note_id, working_folder :str):
     """Process all child tag
 
     Args:
@@ -915,18 +885,14 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
         table (bool, optional): Indicate if it's a loop for a table or the default treatment. Defaults to False.
     """
     log_debug(f"- Converting childrens...", logging.DEBUG)
+
     children = div.find_all(liste_balisesBlock)
-    cell_id=None
     for child in children:
-        log_debug(f"------------------------- Traitement {child.name}", logging.NOTSET)
-        # élément d'une table, on passe car tous les éléments sont à traiter dans la table (div, media, ...)
-        if not cell_id and child.find_parent('td'):
+        if 'table' in [parent.name for parent in child.parents]:
+            log_debug(f"Bloc contenu dans une table, on passe!",logging.NOTSET)
             continue
-        # Traitement d'une cellule d'une table, l'ID est déjà défini
-        if cell_id:
-            div_id = cell_id
-        else:
-            div_id = generate_random_id()
+
+        div_id = generate_random_id()
         shifting_left = extract_shifting_left(child)
         
         div_text = extract_top_level_text(child)
@@ -937,7 +903,7 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
             page_model.edit_block_key(div_id, "div",{})         
         # Traitement des fichiers à intégrer
         elif child.name == 'en-media':
-            log_debug(f"Ajout en-media", logging.NOTSET)
+            log_debug(f"Ajout enfant en-media", logging.NOTSET)
             hash = child.get('hash')
             if hash in files_dict:
                 file_info :FileInfo = files_dict[hash]
@@ -1020,7 +986,6 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
                 process_codeblock(child, div_id, page_model)
         #Traitement table
         elif child.name == 'table':
-            #process_table(child, page_model)
             process_tableV2(child, page_model)
         # Traitement des blocs demandant du contenu texte
         elif div_text:
@@ -1068,9 +1033,6 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
                     else:
                         log_debug("Embed block without a tag", logging.WARNING)
                     
-                    
-                    
-                    
                     continue
                     
                 # Sinon on créé le bloc simple et on traite le texte inline  
@@ -1085,9 +1047,6 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
                     elif style['text-align'] == 'right':
                         page_model.edit_block_key(div_id,"align","AlignRight")
                         
-
-                    
-
                 # Et style si c'est une liste
                 if parent_list:
                     log_debug(f"C'est une liste", logging.NOTSET)
@@ -1116,7 +1075,7 @@ def process_div_children(div, page_model: Model.Page, note_id, files_dict, worki
                     page_model.add_mark_to_text(div_id, 0, text_lenght, mark_type="Bold")
 
 
-def process_file_to_json(page_id :str, files_dict :dict[str, FileInfo], working_folder :str):
+def process_file_to_json(page_id :str, working_folder :str):
     # On génère le modèle json
     for hash_md5, file_info in files_dict.items():
         # On génère le modèle json pour chaque fichier
@@ -1190,12 +1149,13 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             note_id :str = generate_random_id()
             
             # Traitement des fichiers (base64 vers fichiers) avant le reste car référencé dans le parcours des notes
+            global files_dict
             files_dict = get_files(note_xml, files_dest_folder)
             log_debug("Contenu de files_dict :", logging.NOTSET)
             [log_debug(f"{hash_md5}: (file_id={file_info.file_id}, file_name={file_info.unique_filename}, original file_name={file_info.original_filename}, mime_type={file_info.mime_type}, file_size={file_info.file_size}, file_type={file_info.file_type})", logging.NOTSET) for hash_md5, file_info in files_dict.items()]
 
             # Génération des JSON fichiers
-            process_file_to_json(note_id,files_dict, working_folder)
+            process_file_to_json(note_id, working_folder)
             
             # Utilisation de la classe Model.Page pour créer le JSON
             page_model: Model.Page = Model.Page()
@@ -1207,7 +1167,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
                 continue
             
             content: str = content_element.text
-            process_content_to_json(content, page_model, note_id, files_dict, working_folder)
+            process_content_to_json(content, page_model, note_id, working_folder)
             
             # Processing xml tags (other than <content>)
             process_details_to_json(note_xml, page_model, working_folder)
