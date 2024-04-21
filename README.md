@@ -30,9 +30,33 @@ pyinstaller run.py --additional-hooks-dir=.  --add-data "models:models" --add-da
 
 A _Converted_files zip is created in the folder of your enex files, containing the converted files. Import them into Anytype.
 
-**Warning**
-It's under progress. 
-Particularly, files (including image) are exported from enex but cannot be imported in Anytype actually (see [here](https://github.com/anyproto/anytype-heart/issues/456)).
+## Warning
+This tool is usable!
+But beware of its limitations...
+
+**Not (yet) managed by the converter:** 
+- note decryption: you can decrypt notes before export. This should be integrated later
+- complete web pages retrieved via the webclipper: this is functional, but there will always be some cases that won't work as well. In any case, Anytype remains limited: it's impossible to faithfully reproduce all web pages.
+- tasks, for now
+
+**Anytype limitations :** 
+- Tables
+    - No merged cells: the converter "unmerges" them and copies the content into each cell.
+    - no block elements (checkbox, image, title, etc.):
+        - when there's a single image or checkbox, the tool lets you import them (but you won't be able to edit them in Anytype unless you delete it)
+        - when there are several checkboxes or lists, they are transformed into text ("[ ]", "[X]", "-")
+        - when there are several images, only the first is kept
+- Colors: colors are converted to the limited anytype list, trying to take the closest color...
+- Some images are currently buggy
+- SVGs are not supported (integration of a converter planned for the tool)
+- no embedding for txt files, Google drive, etc.
+
+**Evernote limitations :** 
+- notebook names are not exported
+
+**Other limitations:**
+- Beware of exporting large enex files: they must be loaded into memory to be processed, so you may be limited to batch exporting.
+- internal Evernote links are not transposable, so cannot be converted
 
 
 **Points to consider :**
@@ -42,21 +66,17 @@ Some cases may not be covered yet; you can report them to me.
 
 
 ## Progess
-**v0.8.3** 
-- [ ] **Tag Management** : Create a "Evernote tag" relation, add all your tag, keep them in each note
-- [ ] **Reliability and log** 
-
-**Last update : v0.8.4** 
+**v0.8.5** 
 - [ ] **CLI/GUI** : lets you choose CLI or GUI and modify parameters
 - [ ] **Reliability and log** 
 
-**Todo**
-- [ ] **Files** : Import file **-> Bug in AT, issue reported**
-- [ ] **List** case with `<en-todo checked="false" />`
-- [ ] **Evernote Tasks** Transform to text with checkbox?
-- [ ] **Bug** Table with multiples merged cells (which Anytype doesn't support); it's work if only 1 roswpan / colspan
-- [ ] **Bug** Color conversion... AT has limited choice and sometimes "grey" in EN become "green" in AT
-- [ ] **Notebook management** Evernote doesn't export notebook name... To be reviewed if the creation of a notebook during conversion is requested...
+**v0.8.7** 
+- [ ] **Image** : for image as embed weblink, the converter download them (AT doesn't support embeb image from an url)
+
+
+**Last update : v0.8.8** 
+- [ ] **Table converter V2** : Better converter with improved handling of twisted cell merges, and improved cell content conversion (non-Anytype compatible content).
+- [ ] **More html case** 
 
 [See more](./docs/history.md)
 
