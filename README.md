@@ -30,7 +30,7 @@ pyinstaller run.py --additional-hooks-dir=.  --add-data "models:models" --add-da
 
 A _Converted_files zip is created in the folder of your enex files, containing the converted files. Import them into Anytype.
 
-## Warning
+## Limitations
 This tool is usable!
 But beware of its limitations...
 
