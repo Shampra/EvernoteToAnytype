@@ -35,6 +35,7 @@ liste_balisesBlock = ['div', 'p', 'hr',  'h1', 'h2', 'h3','h4', 'h5', 'h6','en-m
 # Liste globale des fichiers de la note
 files_dict = []
 
+
 # Configurer le logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -44,6 +45,19 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Color ANSI just to color console debug!
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 
 class FileInfo:
     def __init__(self, file_id: str, unique_filename: str, original_filename: str, mime_type: str, file_size: int, file_type: str, hash_md5: str):
@@ -302,19 +316,21 @@ def extract_top_level_text(element):
     """
     result = []
     for item in element.contents:
+        # log_debug(f"{bcolors.WARNING}--------  item {bcolors.ENDC} {item} {bcolors.WARNING}{bcolors.ENDC}", logging.NOTSET)
         if isinstance(item, str): # sans balise
             result.append(item)
-            log=f"-------- chaine simple, on ajoute {item}"
+            log=f"chaine simple, on ajoute {item}"
         elif item.name in liste_balisesBlock:
-            log=f"-------- {item.name} est une balise bloc, on passe"
-            break
+            log=f"{item.name} est une balise bloc, on passe"
+            continue
         elif item.name=='br':# cas des br pour les sauts de ligne
             result.append('\n')
-            log = f"-------- ajout saut de ligne"
+            log = f"ajout saut de ligne"
         else: # balise non "bloc", on boucle
-            log = f"-------- autre cas (balise inline?), on boucle"
+            log = f"autre cas (balise inline?), on boucle"
             result.append(extract_top_level_text(item))
-        #log_debug(f"--- extraction top level, item {item} ==> {log}", logging.NOTSET)
+    #     log_debug(f"{bcolors.WARNING} ==>{bcolors.ENDC} {log}", logging.NOTSET)
+    # log_debug(f"{bcolors.WARNING}--- Résultat : {bcolors.ENDC}{''.join(result)}", logging.NOTSET)
     return ''.join(result)
 
 
@@ -892,6 +908,7 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
             log_debug(f"Bloc contenu dans une table, on passe!",logging.NOTSET)
             continue
 
+        log_debug(f"{bcolors.HEADER} Traitement bloc : {bcolors.ENDC} {child}", logging.NOTSET)
         div_id = generate_random_id()
         shifting_left = extract_shifting_left(child)
         
@@ -903,7 +920,7 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
             page_model.edit_block_key(div_id, "div",{})         
         # Traitement des fichiers à intégrer
         elif child.name == 'en-media':
-            log_debug(f"Ajout enfant en-media", logging.NOTSET)
+            log_debug(f"{bcolors.OKCYAN}Ajout enfant en-media{bcolors.ENDC}", logging.NOTSET)
             hash = child.get('hash')
             if hash in files_dict:
                 file_info :FileInfo = files_dict[hash]
@@ -942,7 +959,7 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
             # Exemple : <img style="--en-naturalWidth:1440; --en-naturalHeight:810;" height="476px" width="701px" src="https://www.exemple.com/truc/mon-image.jpg" />
             # Récupération du lien
             href = child.get('src')
-            log_debug(f"image à télécharger : {href}", logging.NOTSET)
+            log_debug(f"{bcolors.OKCYAN}image à télécharger :{bcolors.ENDC} {href}", logging.NOTSET)
             download_state, download_content = download_image(href,working_folder)
             log_debug(f"{download_content}", logging.NOTSET)
             
@@ -983,9 +1000,11 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
 
         # Traitement bloc code (div racine sans texte); "-en-codeblock:true" et "--en-codeblock:true" co-existent...
         elif (child.name == 'div' and 'style' in child.attrs and '-en-codeblock:true' in child['style']) or child.name=='pre':
-                process_codeblock(child, div_id, page_model)
+            log_debug(f"{bcolors.OKCYAN}Ajout enfant codeblock{bcolors.ENDC}", logging.NOTSET)
+            process_codeblock(child, div_id, page_model)
         #Traitement table
         elif child.name == 'table':
+            log_debug(f"{bcolors.OKCYAN}Ajout enfant table{bcolors.ENDC}", logging.NOTSET)
             process_tableV2(child, page_model)
         # Traitement des blocs demandant du contenu texte
         elif div_text:
@@ -993,6 +1012,7 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
             parent_div = child.find_parent('div')
             parent_pre = child.find_parent('pre')
             if child.name == 'div' and ((parent_div and 'style' in parent_div.attrs and '-en-codeblock:true' in parent_div['style']) or parent_pre):
+                log_debug(f"{bcolors.HEADER} Parent codeblock ou pre -> on passe {bcolors.ENDC}", logging.NOTSET)
                 pass
             # Traitements spécifiques
             else:
@@ -1073,7 +1093,8 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
                 if  child.name in ['h4', 'h5', 'h6'] :
                     text_lenght = len(div_text)
                     page_model.add_mark_to_text(div_id, 0, text_lenght, mark_type="Bold")
-
+        else:
+            log_debug(f"{bcolors.WARNING}Balise non traité ou sans contenu texte, on passe{bcolors.ENDC}", logging.NOTSET)
 
 def process_file_to_json(page_id :str, working_folder :str):
     # On génère le modèle json
