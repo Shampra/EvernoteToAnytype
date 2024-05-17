@@ -4,3 +4,4 @@ tk
 tkinterdnd2
 customtkinter
 pyinstaller
+pycryptodome

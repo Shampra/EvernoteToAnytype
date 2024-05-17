@@ -17,11 +17,13 @@ import logging
 import inspect
 from urllib.parse import urlparse
 import urllib.request
+import hmac
+from Crypto.Cipher import AES
 
 
 
 from models.language_patterns import language_patterns
-import models.table_parse, models.mime, models.json_model as Model
+import models.table_parse, models.pbkdf2, models.mime, models.json_model as Model
 from models.options import Options
 import warnings
 
@@ -31,7 +33,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
 # Déclarer options en tant que variable globale
 my_options = Options()
  # Définition des balises block 
-liste_balisesBlock = ['div', 'p', 'hr',  'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','table', 'img','li', 'pre']
+liste_balisesBlock = ['div', 'p', 'hr',  'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','table', 'img','li', 'pre', 'en-crypt']
 # Liste globale des fichiers de la note
 files_dict = []
 
@@ -814,6 +816,49 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
                 else:
                     page_model.edit_text_key(div_id,"checked",False)
 
+def decrypt_block(crypted_soup:BeautifulSoup, password:str = None):
+    """Déchiffrement des blocs chiffrés anytype et remplacement dans l'object soup
+
+    Args:
+        crypted_str (BeautifulSoup): encrypt soup object
+        password (str): password (None= no decryption)
+
+    """
+    if password:
+        iterations = 50000
+        keylength = 128
+        
+        encrypted_content = base64.b64decode(crypted_soup.text.strip())
+        salt = encrypted_content[4:20]
+        salthmac = encrypted_content[20:36]
+        iv = encrypted_content[36:52]
+        ciphertext = encrypted_content[52:-32]
+        body = encrypted_content[0:-32]
+        bodyhmac = encrypted_content[-32:]
+        keyhmac = models.pbkdf2.PBKDF2(password, salthmac, iterations, hashlib.sha256).read(keylength/8)
+        testhmac = hmac.new(keyhmac, body, hashlib.sha256)
+        match_hmac = hmac.compare_digest(testhmac.digest(),bodyhmac)
+
+        if match_hmac:
+            key = models.pbkdf2.PBKDF2(password, salt, iterations, hashlib.sha256).read(keylength/8)
+            aes = AES.new(key, AES.MODE_CBC, iv)
+            plaintext = aes.decrypt(ciphertext)
+            try:
+                plaintext = plaintext.decode('utf-8')
+            except UnicodeDecodeError:
+                plaintext = plaintext.decode('utf-8', errors='ignore')
+            log_debug(f"{bcolors.WARNING} Déchiffrement :  {bcolors.ENDC} {plaintext}", logging.NOTSET) 
+            cleaned_text = '<div><div><span style="font-weight:bold;"> Evernote block decrypted :</span></div>' + re.sub(r'[\x00-\x1F\x7F-\x9F]', '', plaintext) + '</div>'
+        else:
+            cleaned_text = '<div><span style="font-weight:bold; color:red;">Error decrypting a block here !</span></div>'
+    else: # No password, no decrypt!
+            cleaned_text = '<div><span style="font-weight:bold; color:red;">Evernote encrypt block cannot be imported in Anytype !</span></div>'
+    
+    decrypted_soup = BeautifulSoup(cleaned_text, 'html.parser')       
+    log_debug(f"{bcolors.WARNING} Déchiffrement :  {bcolors.ENDC} {cleaned_text}", logging.NOTSET)
+    crypted_soup.replace_with(decrypted_soup)
+
+
 
 def process_media(elt, page_model: Model.Page, shifting=None, cell_id=None):
     log_debug(f"Ajout en-media", logging.NOTSET)
@@ -873,6 +918,10 @@ def process_content_to_json(content: str, page_model, note_id, working_folder :s
     # Créer l'élément JSON pour la première div (shifting = -1)
     root_block = soup.find('en-note')
     if root_block:
+        # Déchiffrement des éventuels blocs chiffrés
+        for en_crypt in soup.find_all('en-crypt'):
+            decrypt_block(en_crypt, "toto")
+        
         block_id = note_id
         page_model.add_block(block_id,-1)
         
@@ -998,6 +1047,9 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
                 page_model.add_text_to_block(div_id, text=download_content) 
                 log_debug(f"{download_content}", logging.WARNING)
 
+        elif child.name == 'en-crypt': # bloc chiffré
+            log_debug(f"{bcolors.FAIL} Bloc chiffré non déchiffré! {bcolors.ENDC}", logging.NOTSET)
+   
         # Traitement bloc code (div racine sans texte); "-en-codeblock:true" et "--en-codeblock:true" co-existent...
         elif (child.name == 'div' and 'style' in child.attrs and '-en-codeblock:true' in child['style']) or child.name=='pre':
             log_debug(f"{bcolors.OKCYAN}Ajout enfant codeblock{bcolors.ENDC}", logging.NOTSET)
@@ -1190,7 +1242,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             content: str = content_element.text
             process_content_to_json(content, page_model, note_id, working_folder)
             
-            # Processing xml tags (other than <content>)
+            # Traitement des balises xml autre que content
             process_details_to_json(note_xml, page_model, working_folder)
 
             # Nettoyer les clés "shifting" si nécessaire
@@ -1227,6 +1279,7 @@ def main(version):
     parser.add_argument("--nozip", action="store_true", default=False, help="Desactivate creation of a zip file")
     parser.add_argument("--debug", action="store_true", default=False, help="Create a debug file")
     parser.add_argument("--test", action="store_true", default=False, help="test with a defaut file")
+    parser.add_argument("--pwd", action="store_true", default=False, help="Password to decrypt encrypted Evernote notes")
     args = parser.parse_args()
     
     if args.enex_sources:
