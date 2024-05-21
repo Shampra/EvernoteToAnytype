@@ -166,12 +166,16 @@ def extract_tag_info(contenu_div, tags_list):
         }
     """    
     # Analyser le contenu HTML   
-    log_debug(f"Recherche des chaines mises en forme pour {contenu_div}", logging.NOTSET)
-    # Supprimer toutes les balises <br/> et les remplacer par des sauts de ligne \n, sinon problème de comptage
-    for br_tag in contenu_div.find_all("br"):
-        br_tag.replace_with("\n")
     # On recréé un objet soup à partir de l'objet tag transmis
+        # Supprimer toutes les balises <br/> et les remplacer par des sauts de ligne \n, sinon problème de comptage
+        
     soup = BeautifulSoup(str(contenu_div), 'html.parser')
+    for br_tag in soup.find_all("br"):
+        br_tag.replace_with("\n")
+    content = soup.find(liste_balisesBlock)
+    if content:
+        for elt in content.find_all(liste_balisesBlock): # Vire aussi les blocs enfant, qui ne doivent pas être traité
+            elt.decompose()
     
     # Initialiser une liste pour stocker les informations des balises
     tags_info = []
@@ -759,6 +763,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
         log_debug(f"--- Add text to json : {div_text}", logging.DEBUG)
         page_model.add_text_to_block(div_id, text=div_text)
         
+        
         # On récupère les tags avec pour chaque le début et fin
         for element in extract_tag_info(div_content, formatting_tags):
             start = element['start']
@@ -810,6 +815,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
                 page_model.add_mark_to_text(div_id, start, end, mark_param=param if param else None, mark_type=formatting_type if formatting_type else None)
             # cas de ces checkbox, en balise autofermante devant le texte!
             if tag_name == 'en-todo' and 'checked' in tag_object.attrs: 
+                log_debug(f"{bcolors.FAIL}checked : {div_id} mis en checked {bcolors.ENDC}", logging.NOTSET)
                 page_model.edit_text_key(div_id,"style",'Checkbox')
                 if 'true' in tag_object['checked']:
                     page_model.edit_text_key(div_id,"checked",True)
@@ -848,7 +854,7 @@ def decrypt_block(crypted_soup:BeautifulSoup, password:str = None):
             except UnicodeDecodeError:
                 plaintext = plaintext.decode('utf-8', errors='ignore')
             log_debug(f"{bcolors.WARNING} Déchiffrement :  {bcolors.ENDC} {plaintext}", logging.NOTSET) 
-            cleaned_text = '<div><div><span style="font-weight:bold;"> Evernote block decrypted :</span></div>' + re.sub(r'[\x00-\x1F\x7F-\x9F]', '', plaintext) + '</div>'
+            cleaned_text = '<div><span style="font-weight:bold;"> Evernote block decrypted :</span>' + re.sub(r'[\x00-\x1F\x7F-\x9F]', '', plaintext) + '</div>'
         else:
             cleaned_text = '<div><span style="font-weight:bold; color:red;">Error decrypting a block here !</span></div>'
     else: # No password, no decrypt!
@@ -920,7 +926,7 @@ def process_content_to_json(content: str, page_model, note_id, working_folder :s
     if root_block:
         # Déchiffrement des éventuels blocs chiffrés
         for en_crypt in soup.find_all('en-crypt'):
-            decrypt_block(en_crypt, "toto")
+            decrypt_block(en_crypt, my_options.pwd)
         
         block_id = note_id
         page_model.add_block(block_id,-1)
@@ -1047,9 +1053,6 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
                 page_model.add_text_to_block(div_id, text=download_content) 
                 log_debug(f"{download_content}", logging.WARNING)
 
-        elif child.name == 'en-crypt': # bloc chiffré
-            log_debug(f"{bcolors.FAIL} Bloc chiffré non déchiffré! {bcolors.ENDC}", logging.NOTSET)
-   
         # Traitement bloc code (div racine sans texte); "-en-codeblock:true" et "--en-codeblock:true" co-existent...
         elif (child.name == 'div' and 'style' in child.attrs and '-en-codeblock:true' in child['style']) or child.name=='pre':
             log_debug(f"{bcolors.OKCYAN}Ajout enfant codeblock{bcolors.ENDC}", logging.NOTSET)
@@ -1148,9 +1151,9 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
         else:
             log_debug(f"{bcolors.WARNING}Balise non traité ou sans contenu texte, on passe{bcolors.ENDC}", logging.NOTSET)
 
-def process_file_to_json(page_id :str, working_folder :str):
+def process_file_to_json(page_id :str, files_dict_todo :dict[str, FileInfo], working_folder :str):
     # On génère le modèle json
-    for hash_md5, file_info in files_dict.items():
+    for hash_md5, file_info in files_dict_todo.items():
         # On génère le modèle json pour chaque fichier
         file_json: Model.File_Object = Model.File_Object()
         file_json.edit_id(file_info.file_id)
@@ -1228,7 +1231,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             [log_debug(f"{hash_md5}: (file_id={file_info.file_id}, file_name={file_info.unique_filename}, original file_name={file_info.original_filename}, mime_type={file_info.mime_type}, file_size={file_info.file_size}, file_type={file_info.file_type})", logging.NOTSET) for hash_md5, file_info in files_dict.items()]
 
             # Génération des JSON fichiers
-            process_file_to_json(note_id, working_folder)
+            process_file_to_json(note_id, files_dict, working_folder)
             
             # Utilisation de la classe Model.Page pour créer le JSON
             page_model: Model.Page = Model.Page()
@@ -1275,11 +1278,11 @@ def main(version):
     my_options.zip_result=True
     
     parser = argparse.ArgumentParser(description="Convert ENEX files.")
-    parser.add_argument("--enex_sources", nargs="+", help="List of ENEX files to convert")
+    parser.add_argument("--enex_sources", nargs="+", help="List of ENEX files to convert", required=True)
     parser.add_argument("--nozip", action="store_true", default=False, help="Desactivate creation of a zip file")
     parser.add_argument("--debug", action="store_true", default=False, help="Create a debug file")
     parser.add_argument("--test", action="store_true", default=False, help="test with a defaut file")
-    parser.add_argument("--pwd", action="store_true", default=False, help="Password to decrypt encrypted Evernote notes")
+    parser.add_argument("--pwd", help="Password to decrypt encrypted Evernote notes")
     args = parser.parse_args()
     
     if args.enex_sources:
@@ -1309,6 +1312,7 @@ def main(version):
     # my_options.tag = "Valeur pour le tag"
     my_options.is_debug = args.debug # Faux par défaut
     my_options.zip_result = not args.nozip # Vrai par défaut
+    my_options.pwd = args.pwd
         
     log_debug(f"Launched with CLI {version}, ZIP = {my_options.zip_result}, DEBUG = {my_options.is_debug}", logging.DEBUG)
     # Liste des fichiers enex dans le répertoire
