@@ -65,6 +65,7 @@ class Interface:
         my_options.zip_result = self.zip_var.get()
         my_options.is_debug = self.debug_var.get()
         my_options.pwd = self.pass_var.get()
+        my_options.dont_ask_pwd=self.dont_ask_pwd.get()
         result = converter.convert_files(self.list_files_to_convert, my_options)
         self.convert_button.configure(state=tk.DISABLED)
         self.info_label.configure(text=f"{result} note(s) converted")
@@ -72,24 +73,28 @@ class Interface:
     def create_interface(self):
         # Options
         FrameOptions = tk.LabelFrame(self.root, text="Options")
-        FrameOptions.grid(row=0, column=1, padx=10, pady=10, rowspan=5, sticky='nsew')
+        FrameOptions.grid(row=0, column=1, padx=10, pady=5, rowspan=5, sticky='nsew')
         self.root.grid_rowconfigure(1, weight=1)
         self.root.grid_columnconfigure(1, weight=1)
 
         self.zip_var = ctk.BooleanVar(value=True)
         zip_checkbox = ctk.CTkCheckBox(FrameOptions, text="Create a zip file", variable=self.zip_var)
-        zip_checkbox.grid(row=1, column=0, padx=5, pady=5, sticky='w')
+        zip_checkbox.grid(row=1, column=0, padx=5, pady=2, sticky='w')
 
         self.debug_var = ctk.BooleanVar()
         debug_checkbox = ctk.CTkCheckBox(FrameOptions, text="Create a debug file", variable=self.debug_var)
-        debug_checkbox.grid(row=2, column=0, padx=5, pady=5, sticky='w')
+        debug_checkbox.grid(row=2, column=0, padx=5, pady=2, sticky='w')
         
-        pass_checkbox = ctk.CTkLabel(FrameOptions, text="Unique password if encrypted text")
-        pass_checkbox.grid(row=3, column=0, padx=5, pady=5, sticky='w')
+        self.dont_ask_pwd = ctk.BooleanVar(value=True)
+        dont_ask_pwd_checkbox = ctk.CTkCheckBox(FrameOptions, text="Don't ask password for each encrypted text", variable=self.dont_ask_pwd)
+        dont_ask_pwd_checkbox.grid(row=3, column=0, padx=5, pady=2, sticky='w')
+        
+        pass_checkbox = ctk.CTkLabel(FrameOptions, text="Unique password if encrypted text :")
+        pass_checkbox.grid(row=4, column=0, padx=5, pady=0, sticky='w')
         
         self.pass_var = ctk.StringVar()
-        pass_entry = ctk.CTkEntry(FrameOptions, textvariable=self.pass_var, placeholder_text="test")
-        pass_entry.grid(row=4, column=0, padx=5, pady=5, sticky='w')
+        pass_entry = ctk.CTkEntry(FrameOptions, textvariable=self.pass_var, placeholder_text="")
+        pass_entry.grid(row=5, column=0, padx=5, pady=0, sticky='w')
         pass_entry.configure(show='*')
 
         # Partie principale 
@@ -116,7 +121,7 @@ def main(version):
     icon = resource_path("image.ico")
 
     root = Tk()
-    root.geometry("520x184")
+    root.geometry("580x210")
     root.title(f"EN to AT converter {version}")
     root.wm_iconbitmap(icon)
 
