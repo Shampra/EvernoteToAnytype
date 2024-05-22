@@ -965,7 +965,20 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
 
         log_debug(f"{bcolors.HEADER} Traitement bloc : {bcolors.ENDC} {child}", logging.NOTSET)
         div_id = generate_random_id()
-        shifting_left = extract_shifting_left(child)
+        
+        shifting_left = 0
+        # Calcul du décalage (= arborescence des blocs), selon le décalage via style ou liste
+        parent_list = child.find_parent(['ol', 'ul'])
+        if parent_list:
+            #Est-ce dans une liste imbriquée? 1ère étape pouvoir pouvoir placer le childrenIds!
+            nested_level = len(parent_list.find_parents(['ol', 'ul']))
+            if nested_level > 0:
+                # On va traiter comme les blocs décalés...
+                shifting_left = 40 * (nested_level)    
+                log_debug(f"{bcolors.HEADER} ==> {nested_level} niveau de listes, on incrémente le décalage de {shifting_left} {bcolors.ENDC}", logging.NOTSET)
+        
+        shifting_left = shifting_left + extract_shifting_left(child)
+        log_debug(f"{bcolors.HEADER} ===> Ajout de  {extract_shifting_left(child)} : décalage à {shifting_left} {bcolors.ENDC}", logging.NOTSET)
         
         div_text = extract_top_level_text(child)
 
@@ -1064,6 +1077,7 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
         # Traitement des blocs demandant du contenu texte
         elif div_text:
             # les div enfant des blocs codes doivent être exclues du traitement global
+            log_debug(f"{bcolors.HEADER}... bloc avec texte... {bcolors.ENDC}", logging.NOTSET)
             parent_div = child.find_parent('div')
             parent_pre = child.find_parent('pre')
             if child.name == 'div' and ((parent_div and 'style' in parent_div.attrs and '-en-codeblock:true' in parent_div['style']) or parent_pre):
@@ -1073,14 +1087,16 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
             else:
                 # Traitement spécifique pour les listes!
                 parent_list = child.find_parent(['ol', 'ul'])
-                if parent_list:
-                    #Est-ce dans une liste imbriquée? 1ère étape pouvoir pouvoir placer le childrenIds!
-                    # TODO : ajout imbrication à l'imbrication existante? Si padding = 40 et imbrication 40 : traiter comme 80?
-                    #        A tester quels cas EN peut générer...
-                    nested_level = len(parent_list.find_parents(['ol', 'ul']))
-                    if nested_level > 0:
-                        # On va traiter comme les blocs décalés...
-                        shifting_left = 40 * (nested_level)
+                # if parent_list:
+                #     log_debug(f"{bcolors.HEADER}... contenu dans une liste ... {bcolors.ENDC}", logging.NOTSET)
+                #     #Est-ce dans une liste imbriquée? 1ère étape pouvoir pouvoir placer le childrenIds!
+                #     # TODO : ajout imbrication à l'imbrication existante? Si padding = 40 et imbrication 40 : traiter comme 80?
+                #     #        A tester quels cas EN peut générer...
+                #     nested_level = len(parent_list.find_parents(['ol', 'ul']))
+                #     if nested_level > 0:
+                #         # On va traiter comme les blocs décalés...
+                #         shifting_left = 40 * (nested_level)
+                #         log_debug(f"{bcolors.HEADER} Décalage : {shifting_left} {bcolors.ENDC}", logging.NOTSET)
                 
 
                 # Récupération styles du bloc
@@ -1249,7 +1265,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             process_details_to_json(note_xml, page_model, working_folder)
 
             # Nettoyer les clés "shifting" si nécessaire
-            page_model.cleanup()
+            # page_model.cleanup()
             
             note_title = page_model.page_json["snapshot"]["data"]["details"]["name"]
             # Filename with the create date, in case several notes have the same title
