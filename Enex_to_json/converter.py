@@ -966,19 +966,17 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
         log_debug(f"{bcolors.HEADER} Traitement bloc : {bcolors.ENDC} {child}", logging.NOTSET)
         div_id = generate_random_id()
         
+        # Collecter tous les parents en une seule fois
+        all_parents = child.find_parents()
+        
         shifting_left = 0
         # Calcul du décalage (= arborescence des blocs), selon le décalage via style ou liste
-        parent_list = child.find_parent(['ol', 'ul'])
-        if parent_list:
-            #Est-ce dans une liste imbriquée? 1ère étape pouvoir pouvoir placer le childrenIds!
-            nested_level = len(parent_list.find_parents(['ol', 'ul']))
-            if nested_level > 0:
-                # On va traiter comme les blocs décalés...
-                shifting_left = 40 * (nested_level)    
-                log_debug(f"{bcolors.HEADER} ==> {nested_level} niveau de listes, on incrémente le décalage de {shifting_left} {bcolors.ENDC}", logging.NOTSET)
+        nested_level = sum(1 for parent in all_parents if parent.name in ['ol', 'ul'])
         
-        shifting_left = shifting_left + extract_shifting_left(child)
-        log_debug(f"{bcolors.HEADER} ===> Ajout de  {extract_shifting_left(child)} : décalage à {shifting_left} {bcolors.ENDC}", logging.NOTSET)
+        # Calculer le décalage basé sur le niveau d'imbrication
+        shifting_left = (40 * (nested_level-1) if nested_level > 1 else 0) + extract_shifting_left(child)
+        
+        log_debug(f"{bcolors.HEADER} ==> {nested_level} niveau de listes, on incrémente le décalage de {shifting_left} et on ajoute {extract_shifting_left(child)} = décalage à {shifting_left}  {bcolors.ENDC}", logging.NOTSET)
         
         div_text = extract_top_level_text(child)
 
@@ -1265,7 +1263,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
             process_details_to_json(note_xml, page_model, working_folder)
 
             # Nettoyer les clés "shifting" si nécessaire
-            # page_model.cleanup()
+            page_model.cleanup()
             
             note_title = page_model.page_json["snapshot"]["data"]["details"]["name"]
             # Filename with the create date, in case several notes have the same title
