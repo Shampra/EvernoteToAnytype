@@ -972,12 +972,9 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
         shifting_left = 0
         # Calcul du décalage (= arborescence des blocs), selon le décalage via style ou liste
         nested_level = sum(1 for parent in all_parents if parent.name in ['ol', 'ul'])
-        
         # Calculer le décalage basé sur le niveau d'imbrication
         shifting_left = (40 * (nested_level-1) if nested_level > 1 else 0) + extract_shifting_left(child)
-        
-        log_debug(f"{bcolors.HEADER} ==> {nested_level} niveau de listes, on incrémente le décalage de {shifting_left} et on ajoute {extract_shifting_left(child)} = décalage à {shifting_left}  {bcolors.ENDC}", logging.NOTSET)
-        
+
         div_text = extract_top_level_text(child)
 
         # On commence par les blocs sans texte
@@ -1076,27 +1073,24 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
         elif div_text:
             # les div enfant des blocs codes doivent être exclues du traitement global
             log_debug(f"{bcolors.HEADER}... bloc avec texte... {bcolors.ENDC}", logging.NOTSET)
-            parent_div = child.find_parent('div')
-            parent_pre = child.find_parent('pre')
-            if child.name == 'div' and ((parent_div and 'style' in parent_div.attrs and '-en-codeblock:true' in parent_div['style']) or parent_pre):
+            has_codeblock_parent = False
+            for parent in all_parents:
+                if parent.name == 'pre' or (parent.name == 'div' and 'style' in parent.attrs and '-en-codeblock:true' in parent['style']):
+                    has_codeblock_parent = True
+            
+            if child.name == 'div' and has_codeblock_parent:
                 log_debug(f"{bcolors.HEADER} Parent codeblock ou pre -> on passe {bcolors.ENDC}", logging.NOTSET)
                 pass
             # Traitements spécifiques
             else:
                 # Traitement spécifique pour les listes!
-                parent_list = child.find_parent(['ol', 'ul'])
-                # if parent_list:
-                #     log_debug(f"{bcolors.HEADER}... contenu dans une liste ... {bcolors.ENDC}", logging.NOTSET)
-                #     #Est-ce dans une liste imbriquée? 1ère étape pouvoir pouvoir placer le childrenIds!
-                #     # TODO : ajout imbrication à l'imbrication existante? Si padding = 40 et imbrication 40 : traiter comme 80?
-                #     #        A tester quels cas EN peut générer...
-                #     nested_level = len(parent_list.find_parents(['ol', 'ul']))
-                #     if nested_level > 0:
-                #         # On va traiter comme les blocs décalés...
-                #         shifting_left = 40 * (nested_level)
-                #         log_debug(f"{bcolors.HEADER} Décalage : {shifting_left} {bcolors.ENDC}", logging.NOTSET)
+                parent_list = None
+                # Parcourir tous les parents pour vérifier les conditions spécifiques
+                for parent in all_parents:
+                    if parent.name in ['ol', 'ul']:
+                        parent_list = parent
+                        break 
                 
-
                 # Récupération styles du bloc
                 style = extract_styles(child.get('style'))
                 
@@ -1152,7 +1146,11 @@ def process_div_children(div, page_model: Model.Page, note_id, working_folder :s
                 
                 
                 # et style des titres
-                parent_title = child.find_parent(['h1', 'h2', 'h3'])
+                parent_title = None
+                for parent in all_parents:
+                    if parent.name in ['h1', 'h2', 'h3']:
+                        parent_title = parent
+                        break  # On peut arrêter la boucle dès qu'on trouve le premier titre
                 if  child.name in ['h1', 'h2', 'h3']:
                     page_model.edit_text_key(div_id,"style","Header" + child.name[1:])
                 elif parent_title:
