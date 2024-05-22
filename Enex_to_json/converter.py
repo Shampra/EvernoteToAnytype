@@ -822,7 +822,7 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
                 else:
                     page_model.edit_text_key(div_id,"checked",False)
 
-def decrypt_block(crypted_soup:BeautifulSoup, password:str = None):
+def decrypt_block(crypted_soup:BeautifulSoup):
     """Déchiffrement des blocs chiffrés anytype et remplacement dans l'object soup
 
     Args:
@@ -830,6 +830,8 @@ def decrypt_block(crypted_soup:BeautifulSoup, password:str = None):
         password (str): password (None= no decryption)
 
     """
+    
+    password = my_options.pwd
     if password:
         iterations = 50000
         keylength = 128
@@ -857,8 +859,10 @@ def decrypt_block(crypted_soup:BeautifulSoup, password:str = None):
             cleaned_text = '<div><span style="font-weight:bold;"> Evernote block decrypted :</span>' + re.sub(r'[\x00-\x1F\x7F-\x9F]', '', plaintext) + '</div>'
         else:
             cleaned_text = '<div><span style="font-weight:bold; color:red;">Error decrypting a block here !</span></div>'
+            log_debug(f"Error decrypting a block, bad password?", logging.WARNING)
     else: # No password, no decrypt!
             cleaned_text = '<div><span style="font-weight:bold; color:red;">Evernote encrypt block cannot be imported in Anytype !</span></div>'
+            log_debug(f"Evernote encrypt block cannot be imported in Anytype.", logging.WARNING)
     
     decrypted_soup = BeautifulSoup(cleaned_text, 'html.parser')       
     log_debug(f"{bcolors.WARNING} Déchiffrement :  {bcolors.ENDC} {cleaned_text}", logging.NOTSET)
@@ -926,7 +930,7 @@ def process_content_to_json(content: str, page_model, note_id, working_folder :s
     if root_block:
         # Déchiffrement des éventuels blocs chiffrés
         for en_crypt in soup.find_all('en-crypt'):
-            decrypt_block(en_crypt, my_options.pwd)
+            decrypt_block(en_crypt)
         
         block_id = note_id
         page_model.add_block(block_id,-1)
