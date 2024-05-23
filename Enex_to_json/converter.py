@@ -19,8 +19,8 @@ from urllib.parse import urlparse
 import urllib.request
 import hmac
 from Crypto.Cipher import AES
-
-
+import tkinter as tk
+from tkinter import simpledialog
 
 from models.language_patterns import language_patterns
 import models.table_parse, models.pbkdf2, models.mime, models.json_model as Model
@@ -822,6 +822,13 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
                 else:
                     page_model.edit_text_key(div_id,"checked",False)
 
+def ask_password_gui():
+    root = tk.Tk()
+    root.withdraw()  # Cacher la fenêtre principale
+    password = simpledialog.askstring("Mot de passe", "Tapez le mot de passe pour ce texte chiffré :", show='*')
+    root.destroy()  # Détruire la fenêtre principale
+    return password
+
 def decrypt_block(crypted_soup:BeautifulSoup):
     """Déchiffrement des blocs chiffrés anytype et remplacement dans l'object soup
 
@@ -855,16 +862,25 @@ def decrypt_block(crypted_soup:BeautifulSoup):
             current_pwd = default_password
             is_pwd_ok = True
         elif my_options.ask_pwd:
+            if my_options.ask_pwd == "GUI":
+                current_pwd = ask_password_gui()
+            else:
+                current_pwd = input("Default password incorect, type the specific password for this encrypted text : ")  
+            current_pwd = current_pwd if current_pwd else "x" # si pas de saisie
             log_debug(f"Default password is incorrect for this encrypted text, trying with specific password.", logging.WARNING)
             log_debug(f"{bcolors.WARNING} Default password is incorrect for this encrypted text, trying with specific password. {bcolors.ENDC}", logging.NOTSET)
-            current_pwd = input("Default password incorect, type the specific password for this encrypted text : ")  
+            
         else: # mot de passe par défaut nok et pas de demande
             cleaned_text = '<div><span style="font-weight:bold; color:red;">Error decrypting a block here !</span></div>'
             log_debug(f"Error decrypting a block, bad default password?", logging.WARNING)
             log_debug(f"{bcolors.WARNING} Error decrypting a block, bad default password?  {bcolors.ENDC}", logging.NOTSET)
     elif my_options.ask_pwd:    # pas de mot de passe par défaut et demande active
+        if my_options.ask_pwd == "GUI":
+            current_pwd = ask_password_gui()
+        else:
+            current_pwd = input("Type the password for this encrypted text : ") 
+        current_pwd = current_pwd if current_pwd else "x" # si pas de saisie
         log_debug(f"{bcolors.WARNING} Ask specific password. {bcolors.ENDC}", logging.NOTSET)
-        current_pwd = input("Type the password for this encrypted text : ")
     else:                       # ni mot de passe par défaut ni demande à faire, on quitte
         cleaned_text = '<div><span style="font-weight:bold; color:red;">Evernote encrypt block cannot be imported in Anytype !</span></div>'
         log_debug(f"Evernote encrypt block cannot be imported in Anytype.", logging.WARNING)
