@@ -1351,7 +1351,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
     return nb_notes
             
 
-def main(version):
+def main():
     enex_files =[]
     my_options.is_debug=False
     my_options.zip_result=True
@@ -1396,7 +1396,7 @@ def main(version):
     my_options.pwd = args.pwd
     my_options.ask_pwd="CLI" if args.ask_pwd else None
         
-    log_debug(f"Launched with CLI {version}, ZIP = {my_options.zip_result}, DEBUG = {my_options.is_debug}", logging.DEBUG)
+    log_debug(f"Launched with CLI {__version__}, ZIP = {my_options.zip_result}, DEBUG = {my_options.is_debug}", logging.DEBUG)
     # Liste des fichiers enex dans le répertoire
     if enex_files:
         convert_files(enex_files, my_options)
@@ -1406,4 +1406,4 @@ def main(version):
     
 
 if __name__ == "__main__":
-    main("v1.0")
+    main()

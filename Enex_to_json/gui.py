@@ -6,6 +6,7 @@ import customtkinter as ctk
 import converter  # Import du module "traitement"
 import os
 from libs.options import Options
+from libs._version import __version__
 import base64
 
 class Tk(ctk.CTk, TkinterDnD.DnDWrapper):
@@ -117,12 +118,12 @@ def resource_path(relative_path):
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
 
-def main(version):
+def main():
     icon = resource_path("image.ico")
 
     root = Tk()
     root.geometry("580x210")
-    root.title(f"EN to AT converter {version}")
+    root.title(f"EN to AT converter {__version__}")
     root.wm_iconbitmap(icon)
 
     root.grid_propagate(False)
@@ -133,4 +134,4 @@ def main(version):
     root.mainloop()
 
 if __name__ == "__main__":
-    main("v1.0")
+    main()
