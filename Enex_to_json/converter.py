@@ -32,13 +32,15 @@ from libs._version import __version__
 # Ignore les avertissements de BeautifulSoup
 warnings.filterwarnings('ignore', category=XMLParsedAsHTMLWarning)
 
+## GLOBAL ##
 # Déclarer options en tant que variable globale
 my_options = Options()
  # Définition des balises block 
 liste_balisesBlock = ['div', 'p', 'hr',  'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','table', 'img','li', 'pre', 'en-crypt']
 # Liste globale des fichiers de la note
 files_dict = []
-
+#
+note_title = None
 
 # Configurer le logging
 logging.basicConfig(
@@ -533,6 +535,8 @@ def process_details_to_json(content: ET.Element, page_model: Model.Page, working
             log_debug(f"Empty text for tag", logging.WARNING)
     if tags_id_lists:
         page_model.edit_details_key("202312evernotetags",tags_id_lists)
+    
+    return title # on retourne le titre de la note, utilise pour la suite
 
 def extract_text_from_codeblock(content):
     """Extrait le texte d'un codeblock : ajout de saut de ligne si besoin et nettoyage des balises
@@ -824,10 +828,10 @@ def extract_text_with_formatting(div_content, div_id, page_model: Model.Page):
                 else:
                     page_model.edit_text_key(div_id,"checked",False)
 
-def ask_password_gui():
+def ask_password_gui(prompt:str):
     root = tk.Tk()
     root.withdraw()  # Cacher la fenêtre principale
-    password = simpledialog.askstring("Mot de passe", "Tapez le mot de passe pour ce texte chiffré :", show='*')
+    password = simpledialog.askstring("Decryption password", prompt, show='*')
     root.destroy()  # Détruire la fenêtre principale
     return password
 
@@ -843,6 +847,7 @@ def decrypt_block(crypted_soup:BeautifulSoup):
     is_pwd_ok = False
     current_pwd = None
     cleaned_text = None
+    global note_title
     # Si mot de passe générique, on le teste
     if default_password:
         iterations = 50000
@@ -858,35 +863,29 @@ def decrypt_block(crypted_soup:BeautifulSoup):
         keyhmac = libs.pbkdf2.PBKDF2(default_password, salthmac, iterations, hashlib.sha256).read(keylength/8)
         testhmac = hmac.new(keyhmac, body, hashlib.sha256)
         is_pwd_ok = hmac.compare_digest(testhmac.digest(),bodyhmac)
-        log_debug(f"{bcolors.WARNING} Mot de passe par défaut {is_pwd_ok} pour ce texte {bcolors.ENDC}", logging.NOTSET) 
         # Mot de passe par défaut ok
         if is_pwd_ok:
             current_pwd = default_password
             is_pwd_ok = True
         elif my_options.ask_pwd:
             if my_options.ask_pwd == "GUI":
-                current_pwd = ask_password_gui()
+                current_pwd = ask_password_gui(f"Default password is incorrect for the current encrypted block in '{note_title}' .\nType the specific password :")
             else:
-                current_pwd = input("Default password incorect, type the specific password for this encrypted text : ")  
+                current_pwd = input(f"Note '{note_title}' : default password incorrect for the current encrypted block, type the specific password :")
             current_pwd = current_pwd if current_pwd else "x" # si pas de saisie
             log_debug(f"Default password is incorrect for this encrypted text, trying with specific password.", logging.WARNING)
-            log_debug(f"{bcolors.WARNING} Default password is incorrect for this encrypted text, trying with specific password. {bcolors.ENDC}", logging.NOTSET)
-            
         else: # mot de passe par défaut nok et pas de demande
             cleaned_text = '<div><span style="font-weight:bold; color:red;">Error decrypting a block here !</span></div>'
             log_debug(f"Error decrypting a block, bad default password?", logging.WARNING)
-            log_debug(f"{bcolors.WARNING} Error decrypting a block, bad default password?  {bcolors.ENDC}", logging.NOTSET)
     elif my_options.ask_pwd:    # pas de mot de passe par défaut et demande active
         if my_options.ask_pwd == "GUI":
-            current_pwd = ask_password_gui()
+            current_pwd = ask_password_gui(f"Encrypted block in '{note_title}' .\nType the specific password :")
         else:
-            current_pwd = input("Type the password for this encrypted text : ") 
+            current_pwd = input("Note '{note_title}' : type the specific password for the current encrypted block : ")
         current_pwd = current_pwd if current_pwd else "x" # si pas de saisie
-        log_debug(f"{bcolors.WARNING} Ask specific password. {bcolors.ENDC}", logging.NOTSET)
     else:                       # ni mot de passe par défaut ni demande à faire, on quitte
         cleaned_text = '<div><span style="font-weight:bold; color:red;">Evernote encrypt block cannot be imported in Anytype !</span></div>'
         log_debug(f"Evernote encrypt block cannot be imported in Anytype.", logging.WARNING)
-        log_debug(f"{bcolors.WARNING} Evernote encrypt block cannot be imported in Anytype. {bcolors.ENDC}", logging.NOTSET)
 
     # On tente de valider avec un nouveau mot de passe
     if current_pwd and not is_pwd_ok: 
@@ -903,7 +902,6 @@ def decrypt_block(crypted_soup:BeautifulSoup):
         keyhmac = libs.pbkdf2.PBKDF2(current_pwd, salthmac, iterations, hashlib.sha256).read(keylength/8)
         testhmac = hmac.new(keyhmac, body, hashlib.sha256)
         is_pwd_ok = hmac.compare_digest(testhmac.digest(),bodyhmac)
-        log_debug(f"{bcolors.WARNING} Mot de passe spécifique {is_pwd_ok} pour ce texte {bcolors.ENDC}", logging.NOTSET) 
         
     if current_pwd: # On a bien un mdp
         if is_pwd_ok: # C'est ok
@@ -914,21 +912,19 @@ def decrypt_block(crypted_soup:BeautifulSoup):
                 plaintext = plaintext.decode('utf-8')
             except UnicodeDecodeError:
                 plaintext = plaintext.decode('utf-8', errors='ignore')
-            log_debug(f"{bcolors.WARNING} Déchiffrement :  {bcolors.ENDC} {plaintext}", logging.NOTSET) 
             cleaned_text = '<div><span style="font-weight:bold;"> Evernote block decrypted :</span>' + re.sub(r'[\x00-\x1F\x7F-\x9F]', '', plaintext) + '</div>'
+            log_debug(f"Successful block decryption", logging.INFO)
         else: # Toujours NOK, on abandonne    
             cleaned_text = '<div><span style="font-weight:bold; color:red;">Error decrypting a block here !</span></div>'
             log_debug(f"Error decrypting a block, bad password?", logging.WARNING)
-            log_debug(f"{bcolors.WARNING} Error decrypting a block, bad password?  {bcolors.ENDC}", logging.NOTSET)
         
         
         
         
     if not cleaned_text:
-        log_debug(f"{bcolors.FAIL} Erreur cleaned_text vide?{bcolors.ENDC} {cleaned_text}", logging.NOTSET)
+        log_debug(f"Cleaned_text empty detected, this case is not valid!", logging.WARNING)
     else:  
         decrypted_soup = BeautifulSoup(cleaned_text, 'html.parser')       
-        log_debug(f"{bcolors.WARNING} Déchiffrement :  {bcolors.ENDC} {cleaned_text}", logging.NOTSET)
         crypted_soup.replace_with(decrypted_soup)
 
 
@@ -983,7 +979,8 @@ def process_content_to_json(content: str, page_model, note_id, working_folder :s
         note_id (_type_): root id racine (used to link files, blocs, ... )
         files_dict (_type_): Dictionnary of available files 
     """
-    log_debug(f"- Converting content...", logging.DEBUG)
+    global note_title
+    log_debug(f"- Converting content for note '{note_title}'", logging.DEBUG)
     # Converting to soup for specific html parsing
     cleaned_html = content.replace('\n', '').replace('\r', '') # suppression des sautes de lignes en dur
     soup = BeautifulSoup(cleaned_html, 'html.parser')  # Utilisation de l'analyseur HTML par défaut
@@ -1280,7 +1277,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
     
     nb_notes = 0
     for enex_file in enex_files_list:
-        log_debug(f"Converting {os.path.basename(enex_file)}...", logging.INFO)
+        log_debug(f"Converting file {os.path.basename(enex_file)}...", logging.INFO)
         with open(enex_file, 'r', encoding='utf-8') as xhtml_file:
             file_content = xhtml_file.read()
             if not file_content:
@@ -1321,16 +1318,18 @@ def convert_files(enex_files_list: list, options: Type[Options]):
                 log_debug(f"Note {nb_notes} has no content!", logging.DEBUG)
                 continue
             
+            # Traitement des balises xml autre que content
+            global note_title 
+            note_title= process_details_to_json(note_xml, page_model, working_folder)
+            
             content: str = content_element.text
             process_content_to_json(content, page_model, note_id, working_folder)
             
-            # Traitement des balises xml autre que content
-            process_details_to_json(note_xml, page_model, working_folder)
+            
 
             # Nettoyer les clés "shifting" si nécessaire
             page_model.cleanup()
             
-            note_title = page_model.page_json["snapshot"]["data"]["details"]["name"]
             # Filename with the create date, in case several notes have the same title
             creation_date: str = page_model.get_creation_date()
             filename = f"{sanitize_filename(note_title)}_{creation_date}.json"
