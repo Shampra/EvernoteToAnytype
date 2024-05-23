@@ -65,7 +65,7 @@ class Interface:
         my_options.zip_result = self.zip_var.get()
         my_options.is_debug = self.debug_var.get()
         my_options.pwd = self.pass_var.get()
-        my_options.dont_ask_pwd=self.dont_ask_pwd.get()
+        my_options.ask_pwd="GUI" if self.ask_pwd.get() else None
         result = converter.convert_files(self.list_files_to_convert, my_options)
         self.convert_button.configure(state=tk.DISABLED)
         self.info_label.configure(text=f"{result} note(s) converted")
@@ -85,9 +85,9 @@ class Interface:
         debug_checkbox = ctk.CTkCheckBox(FrameOptions, text="Create a debug file", variable=self.debug_var)
         debug_checkbox.grid(row=2, column=0, padx=5, pady=2, sticky='w')
         
-        self.dont_ask_pwd = ctk.BooleanVar(value=True)
-        dont_ask_pwd_checkbox = ctk.CTkCheckBox(FrameOptions, text="Don't ask password for each encrypted text", variable=self.dont_ask_pwd)
-        dont_ask_pwd_checkbox.grid(row=3, column=0, padx=5, pady=2, sticky='w')
+        self.ask_pwd = ctk.BooleanVar()
+        ask_pwd_checkbox = ctk.CTkCheckBox(FrameOptions, text="Ask password for each encrypted text", variable=self.ask_pwd)
+        ask_pwd_checkbox.grid(row=3, column=0, padx=5, pady=2, sticky='w')
         
         pass_checkbox = ctk.CTkLabel(FrameOptions, text="Unique password if encrypted text :")
         pass_checkbox.grid(row=4, column=0, padx=5, pady=0, sticky='w')

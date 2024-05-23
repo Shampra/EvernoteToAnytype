@@ -827,8 +827,6 @@ def decrypt_block(crypted_soup:BeautifulSoup):
 
     Args:
         crypted_str (BeautifulSoup): encrypt soup object
-        password (str): password (None= no decryption)
-
     """
     
     password = my_options.pwd
@@ -1201,7 +1199,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
     if not enex_files_list:
         log_debug("No file to convert.", logging.INFO)
         return
-    
+        
     source_folder = os.path.dirname(enex_files_list[0])
     if options.zip_result:
         working_folder = os.path.join(source_folder, "Working_folder")
@@ -1299,6 +1297,8 @@ def main(version):
     parser.add_argument("--debug", action="store_true", default=False, help="Create a debug file")
     parser.add_argument("--test", action="store_true", default=False, help="test with a defaut file")
     parser.add_argument("--pwd", help="Password to decrypt encrypted Evernote notes")
+    parser.add_argument("--ask_pwd", action="store_true" , help="Ask password for each encrypt text if default empty or incorrect")
+    
     args = parser.parse_args()
     
     if args.enex_sources:
@@ -1329,6 +1329,7 @@ def main(version):
     my_options.is_debug = args.debug # Faux par défaut
     my_options.zip_result = not args.nozip # Vrai par défaut
     my_options.pwd = args.pwd
+    my_options.ask_pwd="CLI" if args.ask_pwd else None
         
     log_debug(f"Launched with CLI {version}, ZIP = {my_options.zip_result}, DEBUG = {my_options.is_debug}", logging.DEBUG)
     # Liste des fichiers enex dans le répertoire
