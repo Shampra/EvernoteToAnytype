@@ -1,7 +1,7 @@
 import argparse
 import copy
 import shutil
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 import json
 import random
 import xml.etree.ElementTree as ET
@@ -21,14 +21,16 @@ import hmac
 from Crypto.Cipher import AES
 import tkinter as tk
 from tkinter import simpledialog
+import warnings
 
 from libs.language_patterns import language_patterns
 import libs.table_parse, libs.pbkdf2, libs.mime, libs.json_model as Model
 from libs.options import Options
-import warnings
+from libs._version import __version__
+
 
 # Ignore les avertissements de BeautifulSoup
-warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
+warnings.filterwarnings('ignore', category=XMLParsedAsHTMLWarning)
 
 # Déclarer options en tant que variable globale
 my_options = Options()
