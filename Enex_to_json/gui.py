@@ -68,7 +68,7 @@ class Interface:
         my_options.ask_pwd="GUI" if self.ask_pwd.get() else None
         result = converter.convert_files(self.list_files_to_convert, my_options)
         self.convert_button.configure(state=tk.DISABLED)
-        self.info_label.configure(text=f"{result} note(s) converted")
+        self.info_label.configure(text=f"{result} note{"" if (result<2) else "s"} converted")
 
     def create_interface(self):
         # Options
