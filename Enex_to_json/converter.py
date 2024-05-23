@@ -22,9 +22,9 @@ from Crypto.Cipher import AES
 import tkinter as tk
 from tkinter import simpledialog
 
-from models.language_patterns import language_patterns
-import models.table_parse, models.pbkdf2, models.mime, models.json_model as Model
-from models.options import Options
+from libs.language_patterns import language_patterns
+import libs.table_parse, libs.pbkdf2, libs.mime, libs.json_model as Model
+from libs.options import Options
 import warnings
 
 # Ignore les avertissements de BeautifulSoup
@@ -365,7 +365,7 @@ def get_files(xml_content: ET.Element, dest_folder):
             mime: str  = mime_elem.text.strip()
             file_type: str  = ""
             file_id :str = "file" + generate_random_id()
-            for type, mime_list in models.mime.TYPE.items():
+            for type, mime_list in libs.mime.TYPE.items():
                 if mime in mime_list:
                     file_type = type
                     break
@@ -592,7 +592,7 @@ def process_tableV2(table_content, page_model: Model.Page):
     log_debug(f"- Traitement table...", logging.DEBUG)
     # Création d'une matrice de la table
     try:
-        table_matrix = models.table_parse.parseTable(table_content)
+        table_matrix = libs.table_parse.parseTable(table_content)
     except Exception as ex:
         log_debug(f"- Erreur lors du traitement de la table : {ex}", logging.ERROR)
         return
@@ -853,7 +853,7 @@ def decrypt_block(crypted_soup:BeautifulSoup):
         ciphertext = encrypted_content[52:-32]
         body = encrypted_content[0:-32]
         bodyhmac = encrypted_content[-32:]
-        keyhmac = models.pbkdf2.PBKDF2(default_password, salthmac, iterations, hashlib.sha256).read(keylength/8)
+        keyhmac = libs.pbkdf2.PBKDF2(default_password, salthmac, iterations, hashlib.sha256).read(keylength/8)
         testhmac = hmac.new(keyhmac, body, hashlib.sha256)
         is_pwd_ok = hmac.compare_digest(testhmac.digest(),bodyhmac)
         log_debug(f"{bcolors.WARNING} Mot de passe par défaut {is_pwd_ok} pour ce texte {bcolors.ENDC}", logging.NOTSET) 
@@ -898,14 +898,14 @@ def decrypt_block(crypted_soup:BeautifulSoup):
         ciphertext = encrypted_content[52:-32]
         body = encrypted_content[0:-32]
         bodyhmac = encrypted_content[-32:]
-        keyhmac = models.pbkdf2.PBKDF2(current_pwd, salthmac, iterations, hashlib.sha256).read(keylength/8)
+        keyhmac = libs.pbkdf2.PBKDF2(current_pwd, salthmac, iterations, hashlib.sha256).read(keylength/8)
         testhmac = hmac.new(keyhmac, body, hashlib.sha256)
         is_pwd_ok = hmac.compare_digest(testhmac.digest(),bodyhmac)
         log_debug(f"{bcolors.WARNING} Mot de passe spécifique {is_pwd_ok} pour ce texte {bcolors.ENDC}", logging.NOTSET) 
         
     if current_pwd: # On a bien un mdp
         if is_pwd_ok: # C'est ok
-            key = models.pbkdf2.PBKDF2(current_pwd, salt, iterations, hashlib.sha256).read(keylength/8)
+            key = libs.pbkdf2.PBKDF2(current_pwd, salt, iterations, hashlib.sha256).read(keylength/8)
             aes = AES.new(key, AES.MODE_CBC, iv)
             plaintext = aes.decrypt(ciphertext)
             try:
@@ -1273,7 +1273,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
     
     # Add Relation "Evernote tag"
     dirname = os.path.dirname(__file__)
-    relation_file = os.path.join(dirname, "models/Evernote_Tag_Relation.json")
+    relation_file = os.path.join(dirname, "libs/Evernote_Tag_Relation.json")
     shutil.copy(relation_file,working_folder)
     
     nb_notes = 0
@@ -1404,4 +1404,4 @@ def main(version):
     
 
 if __name__ == "__main__":
-    main("")
+    main("v1.0")

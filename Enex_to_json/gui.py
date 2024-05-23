@@ -5,7 +5,7 @@ from tkinter import Tk, filedialog
 import customtkinter as ctk
 import converter  # Import du module "traitement"
 import os
-from models.options import Options
+from libs.options import Options
 import base64
 
 class Tk(ctk.CTk, TkinterDnD.DnDWrapper):
@@ -133,4 +133,4 @@ def main(version):
     root.mainloop()
 
 if __name__ == "__main__":
-    main("")
+    main("v1.0")
