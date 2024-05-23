@@ -1,6 +1,7 @@
 
 ## Done
 - [x] Creation of the basic JSON model -> Update : as a class
+
 - [x] Generation of ID for blocks
 - [x]  Insertion of elements from divs, as a type page, with full width
 - [x] **Block alignement** : Centered and Right
@@ -14,37 +15,21 @@
 
 - [x] **Détails** Title intégration
 - [x] **Détails** Creation date (format and integration)
+- [x] **Tag Management** Import Evernote tags in a "Evernote tag" relation
 
 - [x] **Files** : Decoding files from EN, association with content, define mime/type/..., define embed or linked
-- [x]  **Code Block** : Integration, basic language detection
+- [x] **Code Block** : Integration, basic language detection
+- [x] **Tables** Management of rowspan and colspan, cell content, td's style, ...
+- [x] **Encrypt notes** Decrypt with a global password or ask a password each time or not unencrypt
 
-- [X] **Tables** Management of rowspan and colspan, cell content, td's style, ...
-
-- [X] **Usage** Treat enex folder
-- [X] **Usage** Treat enex containing multiple note
+- [x] **Usage** Treat enex folder
+- [x] **Usage** Treat enex containing multiple note
+- [x] **Usage** Options to not create a zip and create a debug file
 
 ## TODO
-- [ ] **Files** : Import file **-> Bug in AT, issue reported**
-- [ ] **Tag Management** AT testing using specific tags **-> Bug in AT, issue reported**
-
-- [ ] **Tables** More case for validate  solution about line break (with list, multiples div, br,...)
-- [ ] **List** case with `<en-todo checked="false" />`
-
-- [ ] **Usage**  User parameter : keep the notebook name
-- [ ] **Usage**  Create a zip if multiple json
-
-- [ ] **Code**  Clean the code, versionning, debug file, error management, ... 
-
-
+- [] Optimize ? 
 
 ### Other
 - **Code Block** Better language detection?
 - Task integration?
-- Embed integration of link -> Non-existent in AT currently
 - Adding more properties for file ? (OCR text?)
-
-
-### Options (for GUI)
-- Separator for nested tags?
-- tags Relation if existing (need the ID)
-- Import Notebook information as...

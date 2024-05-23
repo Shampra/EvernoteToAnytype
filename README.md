@@ -1,9 +1,6 @@
 # EvernoteToAnytype
 Enex to JSON converter, for export Evernote note to Anytype
 
-**Please see it as a work in progress**
-
-
 ### Build
 For packaged version :
 ```
@@ -32,12 +29,12 @@ A _Converted_files zip is created in the folder of your enex files, containing t
 
 ## Limitations
 This tool is usable!
-But beware of its limitations...
+But beware of the limitations of each tool...
 
-**Not (yet) managed by the converter:** 
-- note decryption: you can decrypt notes before export. This should be integrated later
-- complete web pages retrieved via the webclipper: this is functional, but there will always be some cases that won't work as well. In any case, Anytype remains limited: it's impossible to faithfully reproduce all web pages.
-- tasks, for now
+**Converter limitations:** 
+- Evernote tasks (and no Anytype equivalent, so nothing planned)
+- Beware of exporting large enex files: they must be loaded into memory to be processed, so you may be limited to batch exporting.
+- internal Evernote links are not transposable, so cannot be converted
 
 **Anytype limitations :** 
 - Tables
@@ -45,7 +42,7 @@ But beware of its limitations...
     - no block elements (checkbox, image, title, etc.):
         - when there's a single image or checkbox, the tool lets you import them (but you won't be able to edit them in Anytype unless you delete it)
         - when there are several checkboxes or lists, they are transformed into text ("[ ]", "[X]", "-")
-        - when there are several images, only the first is kept
+        - when there are several images, **only the first is kept**
 - Colors: colors are converted to the limited anytype list, trying to take the closest color...
 - Some images are currently buggy
 - SVGs are not supported (integration of a converter planned for the tool)
@@ -53,10 +50,7 @@ But beware of its limitations...
 
 **Evernote limitations :** 
 - notebook names are not exported
-
-**Other limitations:**
-- Beware of exporting large enex files: they must be loaded into memory to be processed, so you may be limited to batch exporting.
-- internal Evernote links are not transposable, so cannot be converted
+- no notebook stack export, so you have to export them one by one and recreate the tree structure once imported into Anytype ([an how-to here](https://community.anytype.io/t/recreate-your-evernote-environment-in-anytype/21206))
 
 
 **Points to consider :**
@@ -64,19 +58,14 @@ Evernote exports are not clean (especially between Legacy and version 10): varia
 Some cases may not be covered yet; you can report them to me.
 
 
-
 ## Progess
-**v0.8.5** 
-- [ ] **CLI/GUI** : lets you choose CLI or GUI and modify parameters
-- [ ] **Reliability and log** 
-
-**v0.8.7** 
-- [ ] **Image** : for image as embed weblink, the converter download them (AT doesn't support embeb image from an url)
+**Last update : v.1.0** 
+- [x] **Bloc tree** : Better management of offsets (lists, nested blocks)
+- [x] **More strange case**  : Some corrections (incorrect Evernote xhtml processing)
+- [x] **Encrypted notes**  : Decryption with various options
 
 
-**Last update : v0.8.8** 
-- [ ] **Table converter V2** : Better converter with improved handling of twisted cell merges, and improved cell content conversion (non-Anytype compatible content).
-- [ ] **More html case** 
+
 
 [See more](./docs/history.md)
 
