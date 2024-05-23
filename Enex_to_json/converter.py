@@ -829,8 +829,13 @@ def decrypt_block(crypted_soup:BeautifulSoup):
         crypted_str (BeautifulSoup): encrypt soup object
     """
     
-    password = my_options.pwd
-    if password:
+    default_password = my_options.pwd
+    
+    is_pwd_ok = False
+    current_pwd = None
+    cleaned_text = None
+    # Si mot de passe générique, on le teste
+    if default_password:
         iterations = 50000
         keylength = 128
         
@@ -841,12 +846,50 @@ def decrypt_block(crypted_soup:BeautifulSoup):
         ciphertext = encrypted_content[52:-32]
         body = encrypted_content[0:-32]
         bodyhmac = encrypted_content[-32:]
-        keyhmac = models.pbkdf2.PBKDF2(password, salthmac, iterations, hashlib.sha256).read(keylength/8)
+        keyhmac = models.pbkdf2.PBKDF2(default_password, salthmac, iterations, hashlib.sha256).read(keylength/8)
         testhmac = hmac.new(keyhmac, body, hashlib.sha256)
-        match_hmac = hmac.compare_digest(testhmac.digest(),bodyhmac)
+        is_pwd_ok = hmac.compare_digest(testhmac.digest(),bodyhmac)
+        log_debug(f"{bcolors.WARNING} Mot de passe par défaut {is_pwd_ok} pour ce texte {bcolors.ENDC}", logging.NOTSET) 
+        # Mot de passe par défaut ok
+        if is_pwd_ok:
+            current_pwd = default_password
+            is_pwd_ok = True
+        elif my_options.ask_pwd:
+            log_debug(f"Default password is incorrect for this encrypted text, trying with specific password.", logging.WARNING)
+            log_debug(f"{bcolors.WARNING} Default password is incorrect for this encrypted text, trying with specific password. {bcolors.ENDC}", logging.NOTSET)
+            current_pwd = input("Default password incorect, type the specific password for this encrypted text : ")  
+        else: # mot de passe par défaut nok et pas de demande
+            cleaned_text = '<div><span style="font-weight:bold; color:red;">Error decrypting a block here !</span></div>'
+            log_debug(f"Error decrypting a block, bad default password?", logging.WARNING)
+            log_debug(f"{bcolors.WARNING} Error decrypting a block, bad default password?  {bcolors.ENDC}", logging.NOTSET)
+    elif my_options.ask_pwd:    # pas de mot de passe par défaut et demande active
+        log_debug(f"{bcolors.WARNING} Ask specific password. {bcolors.ENDC}", logging.NOTSET)
+        current_pwd = input("Type the password for this encrypted text : ")
+    else:                       # ni mot de passe par défaut ni demande à faire, on quitte
+        cleaned_text = '<div><span style="font-weight:bold; color:red;">Evernote encrypt block cannot be imported in Anytype !</span></div>'
+        log_debug(f"Evernote encrypt block cannot be imported in Anytype.", logging.WARNING)
+        log_debug(f"{bcolors.WARNING} Evernote encrypt block cannot be imported in Anytype. {bcolors.ENDC}", logging.NOTSET)
 
-        if match_hmac:
-            key = models.pbkdf2.PBKDF2(password, salt, iterations, hashlib.sha256).read(keylength/8)
+    # On tente de valider avec un nouveau mot de passe
+    if current_pwd and not is_pwd_ok: 
+        iterations = 50000
+        keylength = 128
+        
+        encrypted_content = base64.b64decode(crypted_soup.text.strip())
+        salt = encrypted_content[4:20]
+        salthmac = encrypted_content[20:36]
+        iv = encrypted_content[36:52]
+        ciphertext = encrypted_content[52:-32]
+        body = encrypted_content[0:-32]
+        bodyhmac = encrypted_content[-32:]
+        keyhmac = models.pbkdf2.PBKDF2(current_pwd, salthmac, iterations, hashlib.sha256).read(keylength/8)
+        testhmac = hmac.new(keyhmac, body, hashlib.sha256)
+        is_pwd_ok = hmac.compare_digest(testhmac.digest(),bodyhmac)
+        log_debug(f"{bcolors.WARNING} Mot de passe spécifique {is_pwd_ok} pour ce texte {bcolors.ENDC}", logging.NOTSET) 
+        
+    if current_pwd: # On a bien un mdp
+        if is_pwd_ok: # C'est ok
+            key = models.pbkdf2.PBKDF2(current_pwd, salt, iterations, hashlib.sha256).read(keylength/8)
             aes = AES.new(key, AES.MODE_CBC, iv)
             plaintext = aes.decrypt(ciphertext)
             try:
@@ -855,16 +898,20 @@ def decrypt_block(crypted_soup:BeautifulSoup):
                 plaintext = plaintext.decode('utf-8', errors='ignore')
             log_debug(f"{bcolors.WARNING} Déchiffrement :  {bcolors.ENDC} {plaintext}", logging.NOTSET) 
             cleaned_text = '<div><span style="font-weight:bold;"> Evernote block decrypted :</span>' + re.sub(r'[\x00-\x1F\x7F-\x9F]', '', plaintext) + '</div>'
-        else:
+        else: # Toujours NOK, on abandonne    
             cleaned_text = '<div><span style="font-weight:bold; color:red;">Error decrypting a block here !</span></div>'
             log_debug(f"Error decrypting a block, bad password?", logging.WARNING)
-    else: # No password, no decrypt!
-            cleaned_text = '<div><span style="font-weight:bold; color:red;">Evernote encrypt block cannot be imported in Anytype !</span></div>'
-            log_debug(f"Evernote encrypt block cannot be imported in Anytype.", logging.WARNING)
-    
-    decrypted_soup = BeautifulSoup(cleaned_text, 'html.parser')       
-    log_debug(f"{bcolors.WARNING} Déchiffrement :  {bcolors.ENDC} {cleaned_text}", logging.NOTSET)
-    crypted_soup.replace_with(decrypted_soup)
+            log_debug(f"{bcolors.WARNING} Error decrypting a block, bad password?  {bcolors.ENDC}", logging.NOTSET)
+        
+        
+        
+        
+    if not cleaned_text:
+        log_debug(f"{bcolors.FAIL} Erreur cleaned_text vide?{bcolors.ENDC} {cleaned_text}", logging.NOTSET)
+    else:  
+        decrypted_soup = BeautifulSoup(cleaned_text, 'html.parser')       
+        log_debug(f"{bcolors.WARNING} Déchiffrement :  {bcolors.ENDC} {cleaned_text}", logging.NOTSET)
+        crypted_soup.replace_with(decrypted_soup)
 
 
 
@@ -1199,7 +1246,7 @@ def convert_files(enex_files_list: list, options: Type[Options]):
     if not enex_files_list:
         log_debug("No file to convert.", logging.INFO)
         return
-        
+
     source_folder = os.path.dirname(enex_files_list[0])
     if options.zip_result:
         working_folder = os.path.join(source_folder, "Working_folder")
