@@ -41,7 +41,7 @@ files_dict = []
 # Configurer le logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)-8s - %(funcName)-2s l.%(lineno)d - %(message)s',
+    format='%(asctime)s - %(levelname)-8s - %(message)s',
     handlers=[
         logging.FileHandler("debug.log")
     ]
