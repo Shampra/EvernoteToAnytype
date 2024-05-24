@@ -5,3 +5,5 @@ tkinterdnd2
 customtkinter
 pyinstaller
 pycryptodome
+pillow
+cairosvg
