@@ -22,6 +22,7 @@ from Crypto.Cipher import AES
 import tkinter as tk
 from tkinter import simpledialog
 import warnings
+from PIL import Image
 
 from libs.language_patterns import language_patterns
 import libs.table_parse, libs.pbkdf2, libs.mime, libs.json_model as Model
@@ -381,6 +382,14 @@ def get_files(xml_content: ET.Element, dest_folder):
                 original_filename: str = attributes_elem.find("./file-name").text.strip()
             else:
                 original_filename = "noname_" + data_base64[:6]
+                
+            # image without extension, we add it again
+            if '.' not in os.path.basename(original_filename):
+                if mime == "image/jpg":
+                    original_filename += ".jpg"
+                elif mime == "image/png":
+                    original_filename += ".png"
+            
             sanitized_filename = sanitize_filename(original_filename)
             try:
                 data_decode = base64.b64decode(data_base64)
@@ -399,6 +408,16 @@ def get_files(xml_content: ET.Element, dest_folder):
             with open(destination_path, 'wb') as outfile:
                 outfile.write(data_decode)
             file_size = os.path.getsize(destination_path) * 8
+            
+            # Réparation des png, souvent avec CRC incorrect dans Evernote et Anytype ne le support pas...
+            if mime == "image/png":
+                
+                try:
+                    img = Image.open(destination_path)
+                    img.save(destination_path)
+                except:
+                    log_debug(f"{bcolors.FAIL}Fichier {original_filename} corrompu, non récupérable {bcolors.ENDC}", logging.NOTSET)
+                    log_debug(f"File {original_filename} is corrupted and cannot be repair for Anytype ", logging.WARNING)
 
             files_info_dict[hash_md5] = FileInfo(file_id, unique_sanitized_filename, original_filename, mime, file_size, file_type, hash_md5)    
         else:
@@ -968,7 +987,15 @@ def process_media(elt, page_model: Model.Page, shifting=None, cell_id=None):
             page_model.add_block(block_id, shifting=shifting, width = relative_width)
             page_model.add_file_to_block(block_id, file_id = file_id, hash = hash, name = original_filename, file_type = file_type, mime = mime, size = file_size, format=format )
         
-        
+def restore_png(png_file:str):
+    """Rebuild a png to avoid import problem with incorrect CRC
+    """
+    # Vérifier que le fichier existe
+    # l'ouvrir avec Image.open
+    img = Image.open(png_file)
+    # Ecraser avec la version à jour
+    img.save(png_file)
+    
 
 def process_content_to_json(content: str, page_model, note_id, working_folder :str):
     """Find <en-note> tag from content to create the parent element and calling a function for child elements
