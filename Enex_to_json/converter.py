@@ -23,6 +23,7 @@ import tkinter as tk
 from tkinter import simpledialog
 import warnings
 from PIL import Image
+from cairosvg import svg2png
 
 from libs.language_patterns import language_patterns
 import libs.table_parse, libs.pbkdf2, libs.mime, libs.json_model as Model
@@ -946,8 +947,6 @@ def decrypt_block(crypted_soup:BeautifulSoup):
         decrypted_soup = BeautifulSoup(cleaned_text, 'html.parser')       
         crypted_soup.replace_with(decrypted_soup)
 
-
-
 def process_media(elt, page_model: Model.Page, shifting=None, cell_id=None):
     log_debug(f"Ajout en-media", logging.NOTSET)
     hash = elt.get('hash')
@@ -987,16 +986,6 @@ def process_media(elt, page_model: Model.Page, shifting=None, cell_id=None):
             page_model.add_block(block_id, shifting=shifting, width = relative_width)
             page_model.add_file_to_block(block_id, file_id = file_id, hash = hash, name = original_filename, file_type = file_type, mime = mime, size = file_size, format=format )
         
-def restore_png(png_file:str):
-    """Rebuild a png to avoid import problem with incorrect CRC
-    """
-    # Vérifier que le fichier existe
-    # l'ouvrir avec Image.open
-    img = Image.open(png_file)
-    # Ecraser avec la version à jour
-    img.save(png_file)
-    
-
 def process_content_to_json(content: str, page_model, note_id, working_folder :str):
     """Find <en-note> tag from content to create the parent element and calling a function for child elements
 
@@ -1035,7 +1024,6 @@ def process_content_to_json(content: str, page_model, note_id, working_folder :s
         
     else:
         log_debug(f"'en-note' element not find", logging.ERROR)
-
 
 def process_div_children(div, page_model: Model.Page, note_id, working_folder :str):
     """Process all child tag
