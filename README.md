@@ -75,6 +75,8 @@ Some cases may not be covered yet; you can report them to me.
 - [x] **Bloc tree** : Better management of offsets (lists, nested blocks)
 - [x] **More strange case**  : Some corrections (incorrect Evernote xhtml processing)
 - [x] **Encrypted notes**  : Decryption with various options
+- [x] **Rebuild png image**  : Anytype doesn't support PNG if there are errors (CRC, ...) and it's common in Evernote, so the converter rebuilds them!
+- [x] **Convert SVG to PNG** : Anytype doesn't support SVG, so the converter convert them to PNG. **Mind you**, it takes a few seconds per image and the result isn't always perfect, but it's better than losing them... 
 
 
 
