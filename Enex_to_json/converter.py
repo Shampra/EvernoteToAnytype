@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from scipy.spatial import cKDTree
 import hashlib
 import os
+import sys
 import base64
 import re
 from datetime import datetime
@@ -49,9 +50,12 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)-8s - %(message)s',
     handlers=[
-        logging.FileHandler("debug.log")
+        logging.FileHandler("debug.log", 'w', 'utf-8')
     ]
 )
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 logger = logging.getLogger(__name__)
 # Desactivate spam log from PIL
 logging.getLogger('PIL').setLevel(logging.WARNING)
@@ -100,17 +104,22 @@ def log_debug(message: str, level: int = logging.DEBUG):
     Args:
         message (str): message à logger
         level (int, optional): logging level. Defaults to logging.DEBUG.
-    """
+    """       
     caller_frame = inspect.stack()[1]
     caller_func = caller_frame[3].ljust(30)
     caller_lineno = str(caller_frame[2]).ljust(4)
+    print(f"debug...")
     if my_options.is_debug:
         if level >= logging.DEBUG:
             logger.log(level, f"{caller_func} l.{caller_lineno} - {message}")
         if 'TERM_PROGRAM' in os.environ.keys() and os.environ['TERM_PROGRAM'] == 'vscode': # debug en mode dev, on affiche tout
             print(f"{caller_func} l.{caller_lineno} - {message}")
     if level > logging.DEBUG:
-        print(message)
+        try:
+            print(message)
+        except UnicodeEncodeError:
+            # Fallback au cas où l'encodage échoue
+            print(message.encode('ascii', errors='replace').decode('ascii'))
     
         
 def sanitize_filename(filename):
