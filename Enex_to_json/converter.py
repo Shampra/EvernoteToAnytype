@@ -23,7 +23,7 @@ import tkinter as tk
 from tkinter import simpledialog
 import warnings
 from PIL import Image
-from cairosvg import svg2png
+from nocairosvg import svg2png
 
 from libs.language_patterns import language_patterns
 import libs.table_parse, libs.pbkdf2, libs.mime, libs.json_model as Model
@@ -378,20 +378,26 @@ def get_files(xml_content: ET.Element, dest_folder):
                 else:
                     file_type = "File"
 
+            
+            
+            ## Define filename ##
             elt_file_name = attributes_elem.find("./file-name")
             if elt_file_name is not None and elt_file_name.text is not None:
                 original_filename: str = attributes_elem.find("./file-name").text.strip()
             else:
                 original_filename = "noname_" + data_base64[:6]
                 
-            # image without extension, we add it again
+            ## image without extension, we add it again
             if '.' not in os.path.basename(original_filename):
                 if mime == "image/jpg":
                     original_filename += ".jpg"
                 elif mime == "image/png":
                     original_filename += ".png"
+                elif mime == "image/svg+xml":
+                    original_filename += ".svg"
             
             sanitized_filename = sanitize_filename(original_filename)
+            
             try:
                 data_decode = base64.b64decode(data_base64)
             except base64.binascii.Error as e:
@@ -411,8 +417,7 @@ def get_files(xml_content: ET.Element, dest_folder):
             file_size = os.path.getsize(destination_path) * 8
             
             # Réparation des png, souvent avec CRC incorrect dans Evernote et Anytype ne le support pas...
-            if mime == "image/png":
-                
+            if mime == "image/png":  
                 try:
                     img = Image.open(destination_path)
                     img.save(destination_path)
@@ -420,6 +425,24 @@ def get_files(xml_content: ET.Element, dest_folder):
                     log_debug(f"{bcolors.FAIL}Fichier {original_filename} corrompu, non récupérable {bcolors.ENDC}", logging.NOTSET)
                     log_debug(f"File {original_filename} is corrupted and cannot be repair for Anytype ", logging.WARNING)
 
+            # Transform SVG to png because AT doesn't support them
+            if mime == "image/svg+xml":
+                log_debug(f"Converting svg {original_filename} to png, this can take few seconds... ", logging.INFO)
+                try:
+                    destination_path_converted = destination_path.replace('.svg', '.png')
+                    svg2png(url=destination_path, write_to=destination_path_converted)
+                    # image = pyvips.Image.new_from_file(destination_path, access='sequential')
+                    # image.write_to_file(destination_path_converted)
+                    os.remove(destination_path)
+                    # MAJ des infos de référence
+                    original_filename= original_filename.replace('.svg', '.png')
+                    unique_sanitized_filename = unique_sanitized_filename.replace('.svg', '.png')
+                    mime = "image/png"
+                    log_debug(f"Svg {original_filename} converted ", logging.WARNING)
+                except:
+                    log_debug(f"{bcolors.FAIL}Error converting svg {original_filename} {bcolors.ENDC}", logging.NOTSET)
+                    log_debug(f"Error converting svg {original_filename}", logging.WARNING)
+            
             files_info_dict[hash_md5] = FileInfo(file_id, unique_sanitized_filename, original_filename, mime, file_size, file_type, hash_md5)    
         else:
             log_debug(f"--- Resource with empty element for one note", logging.DEBUG)
