@@ -108,7 +108,6 @@ def log_debug(message: str, level: int = logging.DEBUG):
     caller_frame = inspect.stack()[1]
     caller_func = caller_frame[3].ljust(30)
     caller_lineno = str(caller_frame[2]).ljust(4)
-    print(f"debug...")
     if my_options.is_debug:
         if level >= logging.DEBUG:
             logger.log(level, f"{caller_func} l.{caller_lineno} - {message}")
