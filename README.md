@@ -16,14 +16,26 @@ pyinstaller run.py --additional-hooks-dir=.  --add-data "models:models" --add-da
     - with some parameter to execute with CLI (command line)
     - directly to open the GUI (graphic interface) 
 
-- **With GUI**
-    - drop your enex file(s) to convert (or a folder with them inside) or select them with the button
+- **With GUI**,  drop your enex file(s) to convert (or a folder with them inside) or select them with the button and click to **Convert**
     - clic to Convert
 
-- **With CLI**, you must provide parameters
-    - "--enex_sources", mandatory : one or more folder/file
-    - "--debug", optional : enables creation of a debug file
-    - "--nozip", optional : deactivates the creation of a zip file with the result, so you'll have a directory with all the json files
+- **With CLI**, you must provide parameters at least**"--enex_sources"** with one or more folder/file
+
+**GUI and CLI provides options.**
+you can use them with options to be set on the interface or via these command-line parameters :
+- **--enex_sources**, mandatory : add folders or enex files to convert
+- **--debug**, optional : enables creation of a debug file
+*By default*, no debug files are created
+- **--nozip**, optional : deactivates the creation of a zip file with the result, so you'll have a directory with all the json files
+*By default*, it create a zip
+- **--pwd PASSWORD**, optional : set a global password for your encrypted notes.
+It will be used to decipher encrypted notes. If it is not correct, the note will not be decrypted (if the ask_pwd option is enabled, you will be asked for another password).
+- **--ask_pwd**, optional : for each encrypted notes, a password will be requested (in CLI or GUI depending on your use). 
+If a global password is also defined, it will be used first.
+If the password entered is incorrect, the note will not be decrypted.
+*By default*, no password is requested and no note is decrypted.
+
+Other parameters are used for development testing only.
 
 A _Converted_files zip is created in the folder of your enex files, containing the converted files. Import them into Anytype.
 
