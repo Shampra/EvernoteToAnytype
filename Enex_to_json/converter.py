@@ -53,6 +53,8 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+# Desactivate spam log from PIL
+logging.getLogger('PIL').setLevel(logging.WARNING)
 
 # Color ANSI just to color console debug!
 class bcolors:
@@ -417,7 +419,8 @@ def get_files(xml_content: ET.Element, dest_folder):
             file_size = os.path.getsize(destination_path) * 8
             
             # Réparation des png, souvent avec CRC incorrect dans Evernote et Anytype ne le support pas...
-            if mime == "image/png":  
+            if mime == "image/png": 
+                log_debug(f"{bcolors.HEADER}Récupération du fichier png {original_filename}{bcolors.ENDC}", logging.NOTSET) 
                 try:
                     img = Image.open(destination_path)
                     img.save(destination_path)
