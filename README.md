@@ -6,7 +6,7 @@ For packaged version :
 ```
 pip install -r requirements.txt
 pip install PyInstaller 
-pyinstaller run.py --additional-hooks-dir=.  --add-data "models:models" --add-data "image.ico:."
+pyinstaller run.py --additional-hooks-dir=.  --add-data "libs:libs" --add-data "image.ico:."
 ```
 
 
