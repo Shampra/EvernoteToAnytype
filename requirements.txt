@@ -6,4 +6,4 @@ customtkinter
 pyinstaller
 pycryptodome
 pillow
-nocairosvg
+cairosvg

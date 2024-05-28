@@ -24,7 +24,7 @@ import tkinter as tk
 from tkinter import simpledialog
 import warnings
 from PIL import Image
-from nocairosvg import svg2png
+from cairosvg import svg2png
 
 from libs.language_patterns import language_patterns
 import libs.table_parse, libs.pbkdf2, libs.mime, libs.json_model as Model
@@ -442,17 +442,15 @@ def get_files(xml_content: ET.Element, dest_folder):
                 try:
                     destination_path_converted = destination_path.replace('.svg', '.png')
                     svg2png(url=destination_path, write_to=destination_path_converted)
-                    # image = pyvips.Image.new_from_file(destination_path, access='sequential')
-                    # image.write_to_file(destination_path_converted)
                     os.remove(destination_path)
                     # MAJ des infos de référence
                     original_filename= original_filename.replace('.svg', '.png')
                     unique_sanitized_filename = unique_sanitized_filename.replace('.svg', '.png')
                     mime = "image/png"
-                    log_debug(f"Svg {original_filename} converted ", logging.WARNING)
-                except:
+                    log_debug(f"-- Svg {original_filename} converted ", logging.WARNING)
+                except Exception as ex :
                     log_debug(f"{bcolors.FAIL}Error converting svg {original_filename} {bcolors.ENDC}", logging.NOTSET)
-                    log_debug(f"Error converting svg {original_filename}", logging.WARNING)
+                    log_debug(f"-- Error converting svg {original_filename} : {ex}", logging.WARNING)
             
             files_info_dict[hash_md5] = FileInfo(file_id, unique_sanitized_filename, original_filename, mime, file_size, file_type, hash_md5)    
         else:
