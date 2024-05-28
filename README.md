@@ -1,3 +1,6 @@
+
+![v2](https://github.com/Shampra/EvernoteToAnytype/assets/16141040/1f5da137-9d4e-41a0-a916-47b920f2100e)
+
 # EvernoteToAnytype
 Enex to JSON converter, for export Evernote note to Anytype
 
