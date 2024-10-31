@@ -4,7 +4,7 @@ import gui
 from libs._version import __version__
 
 """Version"""
-version="v0.8.8"
+version="v1.01"
 
 """Launch CLI if arguments provided, else GUI"""
 def main():

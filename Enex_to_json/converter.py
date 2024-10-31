@@ -696,8 +696,11 @@ def process_tableV2(table_content, page_model: Model.Page):
             col_style = table_matrix[0][col_index].tag.get('style')
             styles = extract_styles(col_style) if col_style else {}
             col_width_px = styles.get("width", None)
-            if 'px' in col_width_px: #Si pas px, c'est % et difficiule à appliquer sur AT 
-                col_width = int(col_width_px.replace("px", "")) if col_width_px else None 
+            if col_width_px:
+                if 'px' in col_width_px:
+                    col_width = int(col_width_px.replace("px", ""))
+                else:
+                    col_width = None
         
         page_model.add_children_id(columns_list_id,col_id)
         page_model.add_block(col_id, shifting=None, width=col_width)
