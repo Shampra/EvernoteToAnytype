@@ -4,6 +4,10 @@
 # EvernoteToAnytype
 Enex to JSON converter, for export Evernote note to Anytype
 
+### Mac users
+Please check this post to use this tool on Mac, big thanks to solomonikvik :  
+https://community.anytype.io/t/a-tool-to-import-evernote-notes-to-anytype/11483/52
+
 ### Build
 For packaged version :
 ```
@@ -12,7 +16,6 @@ pip install -r requirements.txt
 pip install PyInstaller 
 pyinstaller run.py --additional-hooks-dir=.  --add-data "libs:libs" --add-data "image.ico:."
 ```
-
 
 ## Usage
 - Export your Evernote Notes (notes or a full notebook)
