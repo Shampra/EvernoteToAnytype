@@ -4,6 +4,10 @@
 # EvernoteToAnytype
 Enex to JSON converter, for export Evernote note to Anytype
 
+### Mac users
+Please check this post to use this tool on Mac, big thanks to solomonikvik :  
+https://community.anytype.io/t/a-tool-to-import-evernote-notes-to-anytype/11483/52
+
 ### Build
 For packaged version :
 ```
@@ -12,7 +16,6 @@ pip install -r requirements.txt
 pip install PyInstaller 
 pyinstaller run.py --additional-hooks-dir=.  --add-data "libs:libs" --add-data "image.ico:."
 ```
-
 
 ## Usage
 - Export your Evernote Notes (notes or a full notebook)
@@ -82,9 +85,11 @@ Some cases may not be covered yet; you can report them to me.
 - [x] **Rebuild png image**  : Anytype doesn't support PNG if there are errors (CRC, ...) and it's common in Evernote, so the converter rebuilds them!
 - [x] **Convert SVG to PNG** : Anytype doesn't support SVG, so the converter convert them to PNG. **Mind you**, it takes a few seconds per image and the result isn't always perfect, but it's better than losing them... 
 
-
-
-
 [See more](./docs/history.md)
+
+## Support
+<a href='https://ko-fi.com/V7V716SJ8Z' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi5.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+
+
 
 
