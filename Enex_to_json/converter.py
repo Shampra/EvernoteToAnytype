@@ -524,10 +524,9 @@ def download_image(href, dest_folder):
         # Retourner un état d'erreur si une exception est levée lors du téléchargement
         return False, f"An error occurred while downloading image from {href}: {e}"
 
-    
 
 def process_details_to_json(content: ET.Element, page_model: Model.Page, working_folder: str):
-    """ Retrieves note details """
+    """ Get note details from title, created, tag etc elements """
     log_debug(f"- Retrieving note details", logging.DEBUG)
     title_element = content.find("title")
     title = title_element.text if title_element is not None else "Default Title"   
@@ -588,6 +587,15 @@ def process_details_to_json(content: ET.Element, page_model: Model.Page, working
     if tags_id_lists:
         page_model.edit_details_key("202312evernotetags",tags_id_lists)
     
+    
+    # note-attributes -> Source URL
+    attributes = content.find("note-attributes")
+    if attributes is not None: 
+        source_url = attributes.find("source-url")
+        if source_url is not None and source_url.text is not None:
+            log_debug(f"- Source URL detected", logging.NOTSET)
+            page_model.edit_details_key("source", source_url.text)
+            
     return title # on retourne le titre de la note, utilise pour la suite
 
 def extract_text_from_codeblock(content):
@@ -1399,7 +1407,6 @@ def convert_files(enex_files_list: list, options: Type[Options]):
     log_debug(f"Conversion completed: {nb_notes} notes converted", logging.INFO)
     return nb_notes
             
-
 def main():
     enex_files =[]
     my_options.is_debug=False
