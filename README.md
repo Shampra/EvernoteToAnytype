@@ -14,7 +14,7 @@ For packaged version :
 pip install -r requirements.txt
 # Manually copy a libcairo-2.dll into your python script folder
 pip install PyInstaller 
-pyinstaller run.py --additional-hooks-dir=.  --add-data "libs:libs" --add-data "image.ico:."
+pyinstaller run.py --additional-hooks-dir=.  --add-data "libs:libs" --add-data "image.ico:." --icon=image.ico
 ```
 
 ## Usage
