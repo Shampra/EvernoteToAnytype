@@ -9,10 +9,26 @@ Please check this post to use this tool on Mac, big thanks to solomonikvik :
 https://community.anytype.io/t/a-tool-to-import-evernote-notes-to-anytype/11483/52
 
 ### Build
-For packaged version :
+_You can use the supplied release directly (for Windows). If you prefer to use the source code, here are the instructions._
+
+Prerequisites : Python 3.10+ installed.  
+Creating a virtual environment is recommended.
+
+1. Clone Repository or retrieve the code
+2. Install all the required Python packages
 ```
 pip install -r requirements.txt
-# Manually copy a libcairo-2.dll into your python script folder
+```
+
+3. **CairoSVG requires the native Cairo library.**  
+You must have the file libcairo-2.dll in project directory, system PATH or script directory in your python install (or .venv).   
+You can install it, for example, via this runtime :   
+https://github.com/tschoonj/GTK-for-Windows-runtime-environment-installer
+
+The python tool is now ready for use.
+
+4. For packaged version, install and run PyInstaller :
+```
 pip install PyInstaller 
 pyinstaller run.py --additional-hooks-dir=.  --add-data "libs:libs" --add-data "image.ico:." --icon=image.ico
 ```
