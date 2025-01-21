@@ -9,7 +9,8 @@ Please check this post to use this tool on Mac, big thanks to solomonikvik :
 https://community.anytype.io/t/a-tool-to-import-evernote-notes-to-anytype/11483/52
 
 ### Build
-_You can use the supplied release directly (for Windows). If you prefer to use the source code, here are the instructions._
+_You can use the supplied release directly in a zip file [here](https://github.com/Shampra/EvernoteToAnytype/releases/latest) (for Windows).   
+If you prefer to use the source code, here are the instructions._
 
 Prerequisites : Python 3.10+ installed.  
 Creating a virtual environment is recommended.
