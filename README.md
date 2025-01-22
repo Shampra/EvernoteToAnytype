@@ -61,7 +61,7 @@ If the password entered is incorrect, the note will not be decrypted.
 
 Other parameters are used for development testing only.
 
-A _Converted_files zip (or folder if zip desactivated) is created in the same folder of your enex files, containing the converted files.  
+A _Converted_files zip (or folder if zip is disabled) is created in the same folder of your enex files, containing the converted files.  
 Import them into Anytype : File > Import > Any-Block > select your converted file.
 
 ## Limitations
