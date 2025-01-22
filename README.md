@@ -61,7 +61,8 @@ If the password entered is incorrect, the note will not be decrypted.
 
 Other parameters are used for development testing only.
 
-A _Converted_files zip is created in the folder of your enex files, containing the converted files. Import them into Anytype.
+A _Converted_files zip (or folder if zip desactivated) is created in the same folder of your enex files, containing the converted files.  
+Import them into Anytype : File > Import > Any-Block > select your converted file.
 
 ## Limitations
 This tool is usable!
@@ -80,8 +81,7 @@ But beware of the limitations of each tool...
         - when there are several checkboxes or lists, they are transformed into text ("[ ]", "[X]", "-")
         - when there are several images, **only the first is kept**
 - Colors: colors are converted to the limited anytype list, trying to take the closest color...
-- Some images are currently buggy
-- SVGs are not supported (integration of a converter planned for the tool)
+- SVGs are not supported, this converter convert SVG to PNG
 - no embedding for txt files, Google drive, etc.
 
 **Evernote limitations :** 
