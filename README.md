@@ -4,9 +4,17 @@
 # EvernoteToAnytype
 Enex to JSON converter, for export Evernote note to Anytype
 
-### Mac users
-Please check this post to use this tool on Mac, big thanks to solomonikvik :  
+### Not a Windows user?
+Please note that I was only able to test the installation on Windows.  
+If you encounter problems on another OS, here are some additional hints
+
+**Mac Users**
+Big thanks to solomonikvik :  
 https://community.anytype.io/t/a-tool-to-import-evernote-notes-to-anytype/11483/52
+
+**Linux users**
+Big thanks to mawkler :  
+https://community.anytype.io/t/a-tool-to-import-evernote-notes-to-anytype/11483/57
 
 ### Build
 _You can use the supplied release directly in a zip file [here](https://github.com/Shampra/EvernoteToAnytype/releases/latest) (for Windows).   
