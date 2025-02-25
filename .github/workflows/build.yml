@@ -4,6 +4,17 @@ on:
   push:
     tags:
       - 'v*' # Cette action se déclenche quand vous créez un tag commençant par 'v'
+  workflow_dispatch: # Permet le déclenchement manuel du workflow
+    inputs:
+      release_name:
+        description: 'Nom de la release'
+        required: true
+        default: 'Test Release'
+      prerelease:
+        description: 'Version préliminaire?'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -44,11 +55,12 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: release-windows.zip
-        name: Release ${{ github.ref_name }}
+        name: ${{ github.event.inputs.release_name || format('Release {0}', github.ref_name) }}
         draft: false
-        prerelease: false
+        prerelease: ${{ github.event.inputs.prerelease || false }}
+        tag_name: ${{ github.ref_name || format('manual-release-{0}', github.run_number) }}
         body: |
-          # Release ${{ github.ref_name }}
+          # ${{ github.event.inputs.release_name || format('Release {0}', github.ref_name) }}
           
           Windows executable build generated automatically.
           
