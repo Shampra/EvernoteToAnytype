@@ -40,12 +40,20 @@ jobs:
         $url = "https://github.com/tschoonj/GTK-for-Windows-runtime-environment-installer/releases/download/2022-01-04/gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe"
         Invoke-WebRequest -Uri $url -OutFile "gtk-installer.exe"
         Start-Process -FilePath "gtk-installer.exe" -ArgumentList "/S" -Wait
-        Copy-Item "C:\Program Files\GTK3-Runtime Win64\bin\libcairo-2.dll" -Destination .
+        # Copier dans le dossier où PyInstaller sera exécuté
+        Copy-Item "C:\Program Files\GTK3-Runtime Win64\bin\libcairo-2.dll" -Destination "enex_to_json"
+        # Ajout au PATH pour être sûr que PyInstaller le trouve
+        echo "C:\Program Files\GTK3-Runtime Win64\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
         
     - name: Build with PyInstaller
       run: |
         cd enex_to_json
-        pyinstaller run.py --additional-hooks-dir=. --add-data "libs;libs" --add-data "image.ico;." --icon=image.ico
+        # Vérifier si libcairo est accessible
+        Write-Host "Checking for libcairo-2.dll in current directory:"
+        Get-ChildItem "libcairo-2.dll"
+        # Ajouter au PATH si nécessaire
+        $env:PATH += ";C:\Program Files\GTK3-Runtime Win64\bin"
+        pyinstaller run.py --additional-hooks-dir=. --add-data "libs;libs" --add-data "image.ico;." --icon=image.ico --add-binary "libcairo-2.dll;."
         
     - name: Rename and Zip the executable
       run: |
@@ -56,15 +64,22 @@ jobs:
         Copy-Item -Path "enex_to_json\dist\run\*" -Destination "Converter" -Recurse
         
         # Compresser le dossier Converter
-        Compress-Archive -Path "Converter" -DestinationPath "release-windows.zip"
-      
+        Compress-Archive -Path "Converter" -DestinationPath "Converter-Windows.zip"
+    
+    - name: Upload artifact for testing
+      uses: actions/upload-artifact@v3
+      with:
+        name: converter-windows
+        path: Converter-Windows.zip
+        
     - name: Create Release
       id: create_release
+      if: ${{ github.event.inputs.create_release == 'true' || github.ref_type == 'tag' }}
       uses: softprops/action-gh-release@v1
       with:
-        files: release-windows.zip
+        files: Converter-Windows.zip
         name: ${{ github.event.inputs.release_name || format('Release {0}', github.ref_name) }}
-        draft: true
+        draft: false
         prerelease: ${{ github.event.inputs.prerelease || false }}
         tag_name: ${{ github.ref_name || format('manual-release-{0}', github.run_number) }}
         body: |
