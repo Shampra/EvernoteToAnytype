@@ -47,9 +47,16 @@ jobs:
         cd enex_to_json
         pyinstaller run.py --additional-hooks-dir=. --add-data "libs;libs" --add-data "image.ico;." --icon=image.ico
         
-    - name: Zip the executable
+    - name: Rename and Zip the executable
       run: |
-        Compress-Archive -Path "dist/run/*" -DestinationPath "release-windows.zip"
+        # Créer un nouveau dossier nommé "Converter"
+        New-Item -Path "Converter" -ItemType Directory
+        
+        # Copier tous les fichiers de dist/run vers Converter
+        Copy-Item -Path "enex_to_json\dist\run\*" -Destination "Converter" -Recurse
+        
+        # Compresser le dossier Converter
+        Compress-Archive -Path "Converter" -DestinationPath "release-windows.zip"
       
     - name: Create Release
       id: create_release
@@ -57,17 +64,10 @@ jobs:
       with:
         files: release-windows.zip
         name: ${{ github.event.inputs.release_name || format('Release {0}', github.ref_name) }}
-        draft: false
+        draft: true
         prerelease: ${{ github.event.inputs.prerelease || false }}
         tag_name: ${{ github.ref_name || format('manual-release-{0}', github.run_number) }}
         body: |
           # ${{ github.event.inputs.release_name || format('Release {0}', github.ref_name) }}
-          
-          Windows executable build generated automatically.
-          
-          ## Installation
-          1. Download the zip file
-          2. Extract it to a location of your choice
-          3. Run the `run.exe` file inside the extracted folder
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
