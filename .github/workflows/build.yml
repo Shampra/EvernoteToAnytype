@@ -67,7 +67,7 @@ jobs:
         Compress-Archive -Path "Converter" -DestinationPath "Converter-Windows.zip"
     
     - name: Upload artifact for testing
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: converter-windows
         path: Converter-Windows.zip
