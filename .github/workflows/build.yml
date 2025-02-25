@@ -1,0 +1,60 @@
+name: Build Windows Executable and Create Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Cette action se déclenche quand vous créez un tag commençant par 'v'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install PyInstaller
+        
+    - name: Download Cairo DLL
+      run: |
+        $url = "https://github.com/tschoonj/GTK-for-Windows-runtime-environment-installer/releases/download/2022-01-04/gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe"
+        Invoke-WebRequest -Uri $url -OutFile "gtk-installer.exe"
+        Start-Process -FilePath "gtk-installer.exe" -ArgumentList "/S" -Wait
+        Copy-Item "C:\Program Files\GTK3-Runtime Win64\bin\libcairo-2.dll" -Destination .
+        
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller run.py --additional-hooks-dir=. --add-data "libs;libs" --add-data "image.ico;." --icon=image.ico
+        
+    - name: Zip the executable
+      run: |
+        Compress-Archive -Path "dist/run/*" -DestinationPath "release-windows.zip"
+      
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release-windows.zip
+        name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+        body: |
+          # Release ${{ github.ref_name }}
+          
+          Windows executable build generated automatically.
+          
+          ## Installation
+          1. Download the zip file
+          2. Extract it to a location of your choice
+          3. Run the `run.exe` file inside the extracted folder
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
