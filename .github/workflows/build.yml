@@ -44,6 +44,7 @@ jobs:
         
     - name: Build with PyInstaller
       run: |
+        cd enex_to_json
         pyinstaller run.py --additional-hooks-dir=. --add-data "libs;libs" --add-data "image.ico;." --icon=image.ico
         
     - name: Zip the executable
