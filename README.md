@@ -4,15 +4,40 @@
 # EvernoteToAnytype
 Enex to JSON converter, for export Evernote note to Anytype
 
-### Mac users
-Please check this post to use this tool on Mac, big thanks to solomonikvik :  
+### Not a Windows user?
+Please note that I was only able to test the installation on Windows.  
+If you encounter problems on another OS, here are some additional hints
+
+**Mac Users**
+Big thanks to solomonikvik :  
 https://community.anytype.io/t/a-tool-to-import-evernote-notes-to-anytype/11483/52
 
+**Linux users**
+Big thanks to mawkler :  
+https://community.anytype.io/t/a-tool-to-import-evernote-notes-to-anytype/11483/57
+
 ### Build
-For packaged version :
+_You can use the supplied release directly in a zip file [here](https://github.com/Shampra/EvernoteToAnytype/releases/latest) (for Windows).   
+If you prefer to use the source code, here are the instructions._
+
+Prerequisites : Python 3.10+ installed.  
+Creating a virtual environment is recommended.
+
+1. Clone Repository or retrieve the code
+2. Install all the required Python packages
 ```
 pip install -r requirements.txt
-# Manually copy a libcairo-2.dll into your python script folder
+```
+
+3. **CairoSVG requires the native Cairo library.**  
+You must have the file libcairo-2.dll in project directory, system PATH or script directory in your python install (or .venv).   
+You can install it, for example, via this runtime :   
+https://github.com/tschoonj/GTK-for-Windows-runtime-environment-installer
+
+The python tool is now ready for use.
+
+4. For packaged version, install and run PyInstaller :
+```
 pip install PyInstaller 
 pyinstaller run.py --additional-hooks-dir=.  --add-data "libs:libs" --add-data "image.ico:." --icon=image.ico
 ```
@@ -44,7 +69,8 @@ If the password entered is incorrect, the note will not be decrypted.
 
 Other parameters are used for development testing only.
 
-A _Converted_files zip is created in the folder of your enex files, containing the converted files. Import them into Anytype.
+A _Converted_files zip (or folder if zip is disabled) is created in the same folder of your enex files, containing the converted files.  
+Import them into Anytype : File > Import > Any-Block > select your converted file.
 
 ## Limitations
 This tool is usable!
@@ -63,8 +89,7 @@ But beware of the limitations of each tool...
         - when there are several checkboxes or lists, they are transformed into text ("[ ]", "[X]", "-")
         - when there are several images, **only the first is kept**
 - Colors: colors are converted to the limited anytype list, trying to take the closest color...
-- Some images are currently buggy
-- SVGs are not supported (integration of a converter planned for the tool)
+- SVGs are not supported, this converter convert SVG to PNG
 - no embedding for txt files, Google drive, etc.
 
 **Evernote limitations :** 

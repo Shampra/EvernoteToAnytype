@@ -1,0 +1,88 @@
+name: Build Windows exe and create release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: 
+    inputs:
+      release_name:
+        description: 'Nom de la release'
+        required: true
+        default: 'Test Release'
+      prerelease:
+        description: 'Version préliminaire?'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install PyInstaller
+        
+    - name: Download Cairo DLL
+      run: |
+        $url = "https://github.com/tschoonj/GTK-for-Windows-runtime-environment-installer/releases/download/2022-01-04/gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe"
+        Invoke-WebRequest -Uri $url -OutFile "gtk-installer.exe"
+        Start-Process -FilePath "gtk-installer.exe" -ArgumentList "/S" -Wait
+        # Copier dans le dossier où PyInstaller sera exécuté
+        Copy-Item "C:\Program Files\GTK3-Runtime Win64\bin\libcairo-2.dll" -Destination "enex_to_json"
+        # Ajout au PATH pour être sûr que PyInstaller le trouve
+        echo "C:\Program Files\GTK3-Runtime Win64\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+        
+    - name: Build with PyInstaller
+      run: |
+        cd enex_to_json
+        # Vérifier si libcairo est accessible
+        Write-Host "Checking for libcairo-2.dll in current directory:"
+        Get-ChildItem "libcairo-2.dll"
+        # Ajouter au PATH si nécessaire
+        $env:PATH += ";C:\Program Files\GTK3-Runtime Win64\bin"
+        pyinstaller run.py --additional-hooks-dir=. --add-data "libs;libs" --add-data "image.ico;." --icon=image.ico --add-binary "libcairo-2.dll;."
+        
+    - name: Rename and Zip the executable
+      run: |
+        # Créer un nouveau dossier nommé "Converter"
+        New-Item -Path "Converter" -ItemType Directory
+        
+        # Copier tous les fichiers de dist/run vers Converter
+        Copy-Item -Path "enex_to_json\dist\run\*" -Destination "Converter" -Recurse
+        
+        # Compresser le dossier Converter
+        Compress-Archive -Path "Converter" -DestinationPath "Converter-Windows.zip"
+    
+    - name: Upload artifact for testing
+      uses: actions/upload-artifact@v4
+      with:
+        name: converter-windows
+        path: Converter-Windows.zip
+        
+    - name: Create Release
+      id: create_release
+      if: ${{ github.event.inputs.create_release == 'true' || github.ref_type == 'tag' }}
+      uses: softprops/action-gh-release@v1
+      with:
+        files: Converter-Windows.zip
+        name: ${{ github.event.inputs.release_name || format('Release {0}', github.ref_name) }}
+        draft: false
+        prerelease: ${{ github.event.inputs.prerelease || false }}
+        tag_name: ${{ github.ref_name || format('manual-release-{0}', github.run_number) }}
+        body: |
+          # ${{ github.event.inputs.release_name || format('Release {0}', github.ref_name) }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
