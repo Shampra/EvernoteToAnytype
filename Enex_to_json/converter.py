@@ -663,6 +663,10 @@ def process_tableV2(table_content, page_model: Model.Page):
         log_debug(f"- Erreur lors du traitement de la table : {ex}", logging.ERROR)
         return
     
+    # Vérification pour éviter l'erreur d'index
+    if not table_matrix or len(table_matrix) == 0:
+        log_debug(f"- Table vide ou mal formée", logging.WARNING)
+        return
     
     # Création bloc table
     table_id = generate_random_id()
@@ -693,22 +697,48 @@ def process_tableV2(table_content, page_model: Model.Page):
     for col_index, col_id in enumerate(column_ids):
         # TODO width; et style?
         col_width = None
-        # width
-        if col_list:
+        # Gestion des col si elles existent
+        if col_list and col_index < len(col_list):
             current_col = col_list[col_index]
             col_style = current_col.get('style')
             styles = extract_styles(col_style) if col_style else {}
             col_width_px = styles.get("width", None)
-            col_width = int(col_width_px.replace("px", "")) if col_width_px else None 
-        else: # largeur sur td... si c'est en px sinon on ignore
-            col_style = table_matrix[0][col_index].tag.get('style')
-            styles = extract_styles(col_style) if col_style else {}
-            col_width_px = styles.get("width", None)
+            
+            # Conversion des différentes unités en pixels
             if col_width_px:
+                # Cas des px
                 if 'px' in col_width_px:
                     col_width = int(col_width_px.replace("px", ""))
+                # Cas des pt (conversion approximative: 1pt = 1.33px)
+                elif 'pt' in col_width_px:
+                    pt_value = col_width_px.replace("pt", "")
+                    try:
+                        col_width = int(float(pt_value) * 1.33)
+                    except ValueError:
+                        col_width = None
+                # Autres cas (%, em, etc.) - ignorés pour l'instant
                 else:
                     col_width = None
+        else:  # Largeur sur td si disponible
+            # Vérifier si l'élément existe
+            if col_index < len(table_matrix[0]):
+                col_style = table_matrix[0][col_index].tag.get('style')
+                styles = extract_styles(col_style) if col_style else {}
+                col_width_px = styles.get("width", None)
+                
+                if col_width_px:
+                    # Cas des px
+                    if 'px' in col_width_px:
+                        col_width = int(col_width_px.replace("px", ""))
+                    # Cas des pt
+                    elif 'pt' in col_width_px:
+                        pt_value = col_width_px.replace("pt", "")
+                        try:
+                            col_width = int(float(pt_value) * 1.33)
+                        except ValueError:
+                            col_width = None
+                    else:
+                        col_width = None
         
         page_model.add_children_id(columns_list_id,col_id)
         page_model.add_block(col_id, shifting=None, width=col_width)
@@ -725,6 +755,10 @@ def process_tableV2(table_content, page_model: Model.Page):
         
         # Création des cellules de la ligne, avec gestion du contenu (mise en forme et image)
         for col_index, element in enumerate(table_matrix[row_index]):
+            # Vérifier si col_index est valide
+            if col_index >= len(column_ids):
+                log_debug(f"- Avertissement : plus de cellules que de colonnes définies à la ligne {row_index}", logging.WARNING)
+                continue
             cell_id = f"{row_id}-{column_ids[col_index]}"
             page_model.add_block(cell_id, shifting=None, text="")
             page_model.add_children_id(row_id,cell_id)
