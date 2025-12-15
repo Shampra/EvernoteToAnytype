@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE en-export SYSTEM "http://xml.evernote.com/pub/evernote-export4.dtd">
+<en-export export-date="20240419T130334Z" application="Evernote" version="10.85.4">
+  <note>
+    <title>Test nested tables</title>
+    <created>20230929T142948Z</created>
+    <updated>20240419T130308Z</updated>
+    <note-attributes>
+    </note-attributes>
+    <content>
+      <![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note><div>
+ <div>
+  <div>
+   <h1>Duxback rain poncho (Standard)</h1>
+   <div>
+    <div></div>
+   </div>
+  </div>
+  <div>
+   <a shape="rect" href="https://www.carradice.co.uk/index.php?page_id=product&amp;under=range&amp;product_id=69#" target="_blank">left</a>
+   <div>
+    <ul><li><a shape="rect" href="https://www.carradice.co.uk/product_images/20131207133131-large-1-338.jpg" target="_blank">
+       </a><div>
+        <en-media hash="a0ce89e683faf19dc6ba235912776031" type="image/jpeg" />
+       </div></li><li><a shape="rect" href="https://www.carradice.co.uk/product_images/20130711181345-large-2-349.jpg" target="_blank">
+       </a><div>
+        <en-media hash="2a6c18af86f4d1796add0a5c47011ab6" type="image/jpeg" />
+       </div></li><li><a shape="rect" href="https://www.carradice.co.uk/product_images/20131207133131-large-3-338.jpg" target="_blank">
+       </a><div>
+        <en-media hash="dba1f2e9a1cbed7b915a50f45544e45f" type="image/jpeg" />
+       </div></li><li><a shape="rect" href="https://www.carradice.co.uk/product_images/20131207133131-large-4-338.jpg" target="_blank">
+       </a><div>
+        <en-media hash="44dd28385dd681fcad3828a02f5dbb5b" type="image/jpeg" />
+       </div></li><li><a shape="rect" href="https://www.carradice.co.uk/product_images/20131207133858-large-5-479.jpg" target="_blank">
+       </a><div>
+        <en-media hash="7751680395396c2210002426265a3d6a" type="image/jpeg" />
+       </div></li></ul>
+   </div>
+   <a shape="rect" href="https://www.carradice.co.uk/index.php?page_id=product&amp;under=range&amp;product_id=69#" target="_blank">right</a>
+  </div>
+  <div>
+   Click images to enlarge
+   <en-media alt="Enlarge Image" hash="3d923a8862083ff58203943902a2e199" type="image/png" />
+  </div>
+  <table><tr><td colspan="4" rowspan="1"> Duxback rain poncho (Standard) </td></tr><tr><td colspan="1" rowspan="1"><strong>Quantity</strong> </td><td colspan="3" rowspan="1"></td></tr><tr><td colspan="1" rowspan="1"><strong>Price</strong></td><td colspan="1" rowspan="1">£ 85.00 inc VAT </td><td colspan="1" rowspan="1"> </td></tr><tr><td colspan="1" rowspan="1"><strong>Range</strong></td><td colspan="3" rowspan="1"><a shape="rect" href="https://www.carradice.co.uk/index.php?page_id=category&amp;category_id=45" target="_blank">Rainwear and Jerseys</a></td></tr><tr><td colspan="4" rowspan="1">
+      <table><tr><td colspan="1" rowspan="1"> </td><td colspan="1" rowspan="1"> <a shape="rect" href="https://www.carradice.co.uk/index.php?page_id=product&amp;product_id=73&amp;under=range" target="_blank">next product >></a> </td></tr></table> </td></tr></table>
+  <table><tr><td colspan="2" rowspan="1">Product Details</td></tr><tr><td colspan="1" rowspan="1"><strong>Weight (grams):</strong></td><td colspan="1" rowspan="1">820</td></tr><tr><td colspan="1" rowspan="1"><strong>Other features:</strong></td><td colspan="1" rowspan="1">Internal tapes secure to bike and cyclist: waist ties and hand loops<br clear="none" /> Zipped front opening makes for easy fitting over helmet<br clear="none" /> Lined collar and hood for comfort<br clear="none" /> Leather tab below zip to make fastening easy<br clear="none" /><br clear="none" />Measurements:<br clear="none" /> Front Back<br clear="none" /> 97cm 85cm</td></tr><tr><td colspan="2" rowspan="1">
+      <div>
+       Duxback rainwear is designed specifically to suit the needs of cyclists. It is made from lightweight, reproofable waxed cotton which is waterproof, noiseless and long lasting. All feature taped seams and ScotchliteT strips for added night safety.
+      </div></td></tr></table>
+  <table><tr><td colspan="2" rowspan="1">You may also like</td></tr><tr><td colspan="2" rowspan="1">
+      <table><tr><td colspan="1" rowspan="1"><a shape="rect" href="https://www.carradice.co.uk/index.php?page_id=product&amp;product_id=73" target="_blank"><en-media width="148" hash="b2174da480fa3588a31cffb8f180cfee" type="image/jpeg" /><br clear="none" /> Duxback Overshoes</a></td><td colspan="1" rowspan="1"></td><td colspan="1" rowspan="1"></td></tr></table> </td></tr></table>
+ </div>
+</div></en-note>      ]]>
+    </content>
+    </note>
+</en-export>
