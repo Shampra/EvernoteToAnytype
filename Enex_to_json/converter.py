@@ -664,7 +664,7 @@ def process_tableV2(table_content, page_model: Model.Page):
         return
     
     # Vérification pour éviter l'erreur d'index
-    if not table_matrix or len(table_matrix) == 0:
+    if not table_matrix or len(table_matrix) == 0 or len(table_matrix[0]) == 0:
         log_debug(f"- Table vide ou mal formée", logging.WARNING)
         return
     
@@ -785,9 +785,20 @@ def process_tableV2(table_content, page_model: Model.Page):
             # ['div', 'p', 'hr',  'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','table', 'img','li', 'pre']
             cleaned_cell = copy.copy(element.tag) # attention à copier, on ne modifie pas l'objet d'origine!
             
+            # Traitement des tables dans une table !
+            for sub_table in cleaned_cell.find_all('table'):
+                process_tableV2(sub_table, page_model)
+                sub_table.decompose() # On supprime la table pour qu'elle ne soit pas traitée dans la suite
+            
             elt_in_cell = cleaned_cell.find_all(['div', 'p', 'hr',  'h1', 'h2', 'h3','h4', 'h5', 'h6','en-media','img','li', 'pre', 'en-todo'])
             for tag in elt_in_cell:
                 has_text =  bool(extract_top_level_text(tag).strip())
+                
+                # Ignorer les div qui encapsulent les tables déjà traitées
+                if tag.name == 'div' and not tag.find('table'):
+                    tag.unwrap()
+                    continue
+                
                 if tag.name == "li" or tag.name == 'en-todo':
                     if len([tag for tag in elt_in_cell if tag.name in ['en-todo', 'li']]) == 1 : 
                         parent_list = tag.find_parent(['ol', 'ul'])
